@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SEED | BPSU Environmental Sustainability Office</title>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <header>
+    <div class="header-content">
+      <a href="#" class="logo" onclick="showPage('landing-page')">
+        <div class="logo-icon">
+          <img src="logo.jpg" alt="">
+        </div>
+        <div class="logo-text">SEED - Seeds for Tomorrow</div>
+      </a>
+      
+      <div class="search-bar">
+        <i class="fas fa-search"></i>
+        <input type="text" id="global-search" placeholder="Search for people, organizations, or eco topics...">
+      </div>
+      
+      <!-- Auth Buttons (shown when not logged in) -->
+      <div class="auth-buttons" id="auth-buttons">
+        <button class="auth-btn login" onclick="showPage('login-page')">Log in</button>
+        <button class="auth-btn register" onclick="showPage('register-page')">Register</button>
+      </div>
+      
+      <!-- User Menu (shown when logged in) -->
+      <div id="user-menu" style="display: none;">
+        <div class="nav-icons">
+          <div class="nav-icon" onclick="showPage('landing-page')">
+            <i class="fas fa-home"></i>
+          </div>
+          <div class="nav-icon" onclick="showPage('social-feed-page')">
+            <i class="fas fa-users"></i>
+          </div>
+          <div class="nav-icon" data-target="events-page">
+            <i class="fas fa-calendar-alt"></i>
+          </div>
+          </div>
+          
+          <div class="user-avatar-container">
+            <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="User" class="user-avatar" id="header-avatar">
+            <div class="user-dropdown">
+              <a href="#" class="dropdown-item" onclick="showPage('profile-page')">
+                <i class="fas fa-user"></i> Profile
+              </a>
+              <a href="#" class="dropdown-item" onclick="showPage('profile-page'); switchTab('settings')">
+                <i class="fas fa-cog"></i> Settings
+              </a>
+              <a href="#" class="dropdown-item" onclick="logout()">
+                <i class="fas fa-sign-out-alt"></i> Logout
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Landing Page -->
+  <div id="landing-page" class="page-container active">
+    <section class="hero">
+      <div class="hero-left">
+        <h1>Join SEED to build<br>a greener community</h1>
+        <p>The simplest way for students and community members to plant trees around the world and offset their CO2 emissions</p>
+        <button class="btn cta" onclick="logTree()">Log a Tree</button>
+        <div class="counter">
+          <strong id="tree-counter">0</strong><br>
+          <span>trees planted across BPSU campuses</span>
+        </div>
+      </div>
+      <div class="hero-right"></div>
+    </section>
+
+    <!-- Mission + Stats Section -->
+    <section class="mission-stats">
+      <div class="mission-header">
+        <h2>On a mission to build a sustainable community</h2>
+        <p class="subheading">There is no solving climate change without solving deforestation.</p>
+      </div>
+
+      <div class="stat-cards">
+        <div class="stat-card">
+          <h3 class="stat-number" id="trees-count">0</h3>
+          <p class="stat-label">Total Trees Planted</p>
+          <div class="progress-bar"><div id="trees-fill" class="fill"></div></div>
+          <p class="goal-label">This month's goal:</p>
+          <p class="goal-number">20,000</p>
+        </div>
+
+        <div class="stat-card">
+          <h3 class="stat-number" id="waste-count">0 kg</h3>
+          <p class="stat-label">Waste Reduced</p>
+          <div class="progress-bar"><div id="waste-fill" class="fill"></div></div>
+          <p class="goal-label">This month's goal:</p>
+          <p class="goal-number">8,000 kg</p>
+        </div>
+
+        <div class="stat-card">
+          <h3 class="stat-number" id="carbon-count" >0 kg</h3>
+          <p class="stat-label">Carbon Emissions Reduced</p>
+          <div class="progress-bar"><div id="carbon-fill" class="fill"></div></div>
+          <p class="goal-label">This month's goal:</p>
+          <p class="goal-number">20,000 kg</p>
+        </div>
+      </div>
+
+      <div class="support-wrapper">
+        <button class="btn support">Support Our Mission</button>
+      </div>
+    </section>
+
+    <!-- Start Greener Section -->
+    <section class="start-greener">
+      <div class="start-greener-container">
+        <div class="start-greener-left">
+          <h2>Join the Sustainability Movement</h2>
+          <p>Plant trees around the community and track them all in one place.</p>
+          <div class="start-buttons">
+            <button class="btn primary" onclick="showPage('social-feed-page')">Student Sign Up</button>
+            <button class="btn secondary" onclick="showPage('social-feed-page')">Organization Registration</button>
+          </div>
+        </div>
+        <div class="start-greener-right">
+          <img src="https://scontent.fmnl9-5.fna.fbcdn.net/v/t39.30808-6/495569860_122175892790333217_3101791358132608729_n.jpg?_nc_cat=109&ccb=1-7&_nc_sid=f727a1&_nc_eui2=AeGGZo6cRv7EfmLMGfX4uQORYpQn9Iyy-hFilCf0jLL6EV9Ztjg1e5L-C9Slk3LT5-yz58amq4shsV5sn-I7Sns-&_nc_ohc=FIghj9MiZ98Q7kNvwEn_Wso&_nc_oc=Adnar2wpgcVnQTj4zwOLuQrs-31wdbIibcd7LupPqtcy_RskdYGhGZtdvUOG_lKWMbQ&_nc_zt=23&_nc_ht=scontent.fmnl9-5.fna&_nc_gid=v6wOSFN4lBjuKENlNzaexg&oh=00_Afbtudj8_K_dF7UsmzuS7A2F5ozz0Qt-pPKaBCypb4G2kQ&oe=68C0AC71" alt="Green campus" style="border-radius: 12px;">
+        </div>
+      </div>
+    </section>
+
+    <!-- Reforestation Section -->
+    <section class="reforestation-section">
+      <h2 class="reforest-heading">Our Community Reforestation Strategy</h2>
+      <div class="reforest-cards">
+        <div class="reforest-card">
+            <div>
+              <h3>Combat Deforestation</h3>
+              <p>Restore green spaces across the community through voluntary tree planting.</p>
+          </div>
+        </div>
+
+        <div class="reforest-card">
+            <div>
+              <h3>Reduce Carbon Footprint</h3>
+              <p>Each tree contributes to the sustainable development goal for carbon neutrality.</p>
+            
+          </div>
+        </div>
+
+        <div class="reforest-card">
+            <div>
+              <h3>Engage with different Communities</h3>
+              <p>Collaborate with students, organizations, community, and partners.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Organizations Section -->
+    <section class="orgs-section">
+      <div class="orgs-container">
+        <div class="orgs-left">
+          <h2>Organizations Driving Change</h2>
+          <p>Students and Organizations across the community are leading sustainability initiatives.</p>
+          <button class="orgs-btn" onclick="showPage('social-feed-page')">Register Your Organization</button>
+        </div>
+        <div class="orgs-right">
+          <div class="orgs-grid">
+            <div>Env Club</div>
+            <div>Bio Society</div>
+            <div>Eco Eng</div>
+            <div>Green Chem</div>
+            <div>Sustain IT</div>
+            <div>Eco Leaders</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Ecosystem Section -->
+    <section class="ecosystem-section">
+      <div class="ecosystem-header">
+        <h2>SEED Features</h2>
+        <p>Tools designed for students, organizations, communities, and partners engagement and environmental impact</p>
+        <button class="ecosystem-button" onclick="showPage('social-feed-page')">Explore All Features</button>
+      </div>
+
+      <div class="ecosystem-features">
+        <div class="feature-card">
+          <h3>Tree Planting Tracker</h3>
+          <p>Monitor reforestation efforts across BPSU with real-time data.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Waste Management</h3>
+          <p>Log cleanup drives and track waste collection milestones.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Sustainability Social Feed</h3>
+          <p>Share your sustainability contributions and view others posts.</p>
+        </div>
+        <div class="feature-card">
+          <h3>Sustainability Rewards</h3>
+          <p>Earn recognition for completing tree planting events.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  
+  <!-- Social Feed Page -->
+  <div id="social-feed-page" class="page-container">
+    <div class="feed-container">
+      <!-- Left Sidebar -->
+      <div class="sidebar left-sidebar">  
+        <h3 class="sidebar-title">Eco Trends</h3>
+        <div id="eco-trends"></div>
+      </div>
+      
+      <!-- Main Feed -->
+      <div class="main-feed">
+        <!-- Create Post -->
+        <div class="create-post">
+          <div class="post-header">
+            <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="User" class="user-avatar" id="post-user-avatar">
+            <div class="post-input">
+              <textarea id="post-content" placeholder="What's happening in the sustainability world?"></textarea>
+            </div>
+          </div>
+          <div class="post-actions">
+            <button class="post-btn" onclick="createPost()">Post</button>
+          </div>
+          <div id="image-preview" style="display: none; margin-top: 15px;">
+            <img id="preview-image" src="" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+            <button id="remove-image" onclick="removeImage()">Remove</button>
+          </div>
+        </div>
+        
+        <!-- Posts Container -->
+        <div id="posts-container"></div>
+      </div>
+      
+      <!-- Right Sidebar -->
+      <div class="sidebar right-sidebar profile-card">
+        <div class="profile-header">
+          <img src="https://images.unsplash.com/photo-1472289065668-ce650ac443d2?auto=format&fit=crop&w=600" alt="Cover" class="cover-photo">
+          <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="User" class="profile-avatar" id="profile-sidebar-avatar">
+        </div>
+        <div class="profile-info">
+          <div class="profile-name" id="profile-sidebar-name"></div>
+          <div class="profile-handle" id="profile-sidebar-handle"></div>
+          
+          <div class="profile-stats">
+            <div class="stat">
+              <div id="profile-posts-count" class="stat-number">0</div>
+              <div class="stat-label">Posts</div>
+            </div>
+            <div class="stat">
+              <div id="profile-events-count" class="stat-number">0</div>
+              <div class="stat-label">Events</div>
+            </div>
+            <div class="stat">
+              <div id="profile-trees-count" class="stat-number">0</div>
+              <div class="stat-label">Trees Planted</div>
+            </div>
+          </div>
+          
+          <div class="profile-bio" id="profile-sidebar-bio">
+            Join SEED to start contributing to a greener campus!
+          </div>
+          
+          <button class="btn btn-primary" onclick="showPage('profile-page')">Edit Profile</button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+<!-- Events Page -->
+<div id="events-page" class="page-container">
+  <div class="events-container">
+    <div class="events-header">
+      <h1>Tree Planting Events</h1>
+      <button class="create-event-btn" onclick="openCreateEventModal()">
+        <i class="fas fa-plus"></i> Create Event
+      </button>
+    </div>
+    
+    <!-- Filters -->
+    <div class="events-filters">
+      <div class="filter-group">
+        <label for="campus-filter">Campus</label>
+        <select id="campus-filter">
+          <option value="all">All Campuses</option>
+          <option value="main">Main Campus</option>
+          <option value="north">North Campus</option>
+          <option value="south">South Campus</option>
+          <option value="east">East Campus</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="date-filter">Date</label>
+        <select id="date-filter">
+          <option value="all">Any Date</option>
+          <option value="week">This Week</option>
+          <option value="month">This Month</option>
+          <option value="upcoming">Upcoming</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="status-filter">Status</label>
+        <select id="status-filter">
+          <option value="all">All Status</option>
+          <option value="upcoming">Upcoming</option>
+          <option value="in-progress">In Progress</option>
+          <option value="completed">Completed</option>
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="search-filter">Search</label>
+        <input type="text" id="search-filter" placeholder="Event name or location...">
+      </div>
+    </div>
+    
+    <!-- Event Cards Container -->
+    <div class="events-grid" id="events-grid">
+      <!-- JS will inject event cards here -->
+    </div>
+  </div>
+</div>
+
+<!-- Event Details Page -->
+<div id="event-detail-page" class="page-container">
+  <div class="event-detail-container">
+    <!-- Banner -->
+    <div class="event-banner" id="event-banner">
+      <div class="event-header">
+        <h1 class="event-title-large" id="event-title-large"></h1>
+        <p class="event-subtitle" id="event-subtitle"></p>
+        <div class="event-header-meta">
+          <div class="event-meta-item" id="event-date-meta"></div>
+          <div class="event-meta-item" id="event-time-meta"></div>
+          <div class="event-meta-item" id="event-location-meta"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="event-detail-content">
+      <!-- About -->
+      <div class="event-section">
+        <h2>About This Event</h2>
+        <p class="event-description-detail" id="event-description-detail"></p>
+        
+        <div class="event-info-grid" id="event-info-grid">
+          <!-- Info cards injected by JS -->
+        </div>
+      </div>
+
+      <!-- Schedule -->
+      <div class="event-section">
+        <h2>Event Schedule</h2>
+        <div class="info-card" id="event-schedule">
+          <!-- Timeline injected by JS -->
+        </div>
+      </div>
+
+      <!-- Participants -->
+      <div class="event-section">
+        <div class="participants-section">
+          <div class="participants-header">
+            <h2 id="participants-header"></h2>
+            <button class="event-btn join" id="join-event-btn" onclick="joinEvent(this)">Join Event</button>
+          </div>
+          <div class="participants-grid" id="participants-grid">
+            <!-- Participants injected by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="action-section">
+        <button class="action-btn joined" id="joined-btn" style="display:none;">
+          <i class="fas fa-check"></i> You've Joined This Event
+        </button>
+        <button class="action-btn share" id="share-event-btn">
+          <i class="fas fa-share-alt"></i> Share Event
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+
+  <div id="search-results-page" class="page-container">
+    <div class="search-results-container">
+      <h1>Search Results</h1>
+      <div id="search-results-list" class="results-list">
+        <!-- Results will be injected here -->
+      </div>
+    </div>
+  </div>
+  
+  <!-- Login Page -->
+  <div id="login-page" class="page-container">
+    <div class="login-container">
+      <div class="login-header">
+        <h2>Welcome Back</h2>
+        <p>Sign in to your SEED account</p>
+      </div>
+      
+      <form class="login-form">
+        <div class="form-group">
+          <label for="email">Email or Username</label>
+          <input type="text" id="email" placeholder="Enter your email or username">
+        </div>
+        
+        <div class="form-group">
+          <label for="password">Password</label>
+          <input type="password" id="password" placeholder="Enter your password">
+        </div>
+        
+        <div class="login-options">
+          <div class="remember-me">
+            <input type="checkbox" id="remember">
+            <label for="remember">Remember me</label>
+          </div>
+          <a href="#" class="forgot-password">Forgot password?</a>
+        </div>
+        
+        <button type="button" class="btn-login" onclick="login()">Log in</button>
+      </form>
+      
+      <div class="signup-link">
+        Don't have an account? <a href="#" onclick="showPage('register-page')">Register now</a>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Register Page -->
+  <div id="register-page" class="page-container">
+    <div class="register-container">
+      <div class="register-header">
+        <h2>Create Account</h2>
+        <p>Join SEED to make a difference</p>
+      </div>
+      
+      <form class="login-form">
+        <div class="form-group">
+          <label for="reg-name">Full Name</label>
+          <input type="text" id="reg-name" placeholder="Enter your full name">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-email">Email</label>
+          <input type="email" id="reg-email" placeholder="Enter your email">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-username">Username</label>
+          <input type="text" id="reg-username" placeholder="Choose a username">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-password">Password</label>
+          <input type="password" id="reg-password" placeholder="Create a password">
+        </div>
+        
+        <div class="form-group">
+          <label for="reg-confirm">Confirm Password</label>
+          <input type="password" id="reg-confirm" placeholder="Confirm your password">
+        </div>
+        
+        <button type="button" class="btn-login" onclick="register()">Create Account</button>
+      </form>
+      
+      <div class="signup-link">
+        Already have an account? <a href="#" onclick="showPage('login-page')">Log in</a>
+      </div>
+    </div>
+  </div>
+  
+<!-- Profile Page -->
+<div id="profile-page" class="page-container">
+  <div class="profile-page-container">
+    <div class="profile-banner">
+      <div class="profile-actions">
+        <button><i class="fas fa-cog"></i> Settings</button>
+        <button><i class="fas fa-share-alt"></i> Share</button>
+      </div>
+      <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="User" class="avatar" id="profile-avatar">
+    </div>
+
+    <div class="profile-details">
+      <div class="profile-name-large" id="profile-name-large">Guest User</div>
+      <div class="profile-handle-large" id="profile-handle-large">@guest_user</div>
+      <div class="profile-bio-large" id="profile-bio">
+        Join SEED to start contributing to a greener community!
+      </div>
+
+<div class="profile-stats-large">
+  <div class="stat-large">
+    <div class="number" id="profile-posts-count">0</div>
+    <div class="label">Posts</div>
+  </div>
+  <div class="stat-large">
+    <div class="number" id="profile-events-count">0</div>
+    <div class="label">Events</div>
+  </div>
+  <div class="stat-large">
+    <div class="number" id="profile-trees-count">0</div>
+    <div class="label">Trees Planted</div>
+  </div>
+</div>
+
+
+      <!-- Tabs -->
+      <div class="profile-tabs">
+        <div class="profile-tab active" onclick="switchTab('activity')">Activity</div>
+        <div class="profile-tab" onclick="switchTab('settings')">Settings</div>
+      </div>
+
+      <!-- Tab Contents -->
+      <div class="tab-content">
+        <!-- Activity Tab -->
+        <div class="tab-pane active" id="activity-tab">
+          <h3>Recent Activity</h3>
+          <div class="activity-grid" id="activity-grid"></div>
+        </div>
+
+        <!-- Settings Tab -->
+        <div class="tab-pane" id="settings-tab">
+          <h3>Account Settings</h3>
+          <div class="settings-form">
+            <div class="form-group">
+              <label for="avatar-url">Avatar URL</label>
+              <div class="avatar-preview-container">
+                <img id="avatar-preview" src="" alt="Avatar Preview" class="avatar-preview">
+                <input type="text" id="avatar-url" placeholder="Enter avatar URL">
+              </div>
+            </div>
+            <div class="form-group">
+              <label for="display-name">Display Name</label>
+              <input type="text" id="display-name" value="Guest User">
+            </div>
+            <div class="form-group">
+              <label for="username">Username</label>
+              <input type="text" id="username" value="guest_user">
+            </div>
+            <div class="form-group">
+              <label for="email">Email</label>
+              <input type="email" id="email" placeholder="Enter your email">
+            </div>
+            <div class="form-group">
+              <label for="bio">Bio</label>
+              <textarea id="bio" rows="3">Join SEED to start contributing to a greener campus!</textarea>
+            </div>
+            <div class="form-group">
+              <label for="department">Department</label>
+              <input type="text" id="department" value="Guest User">
+            </div>
+
+            <h4>Change Password</h4>
+            <div class="form-group">
+              <label for="current-password">Current Password</label>
+              <input type="password" id="current-password" placeholder="Enter current password">
+            </div>
+            <div class="form-group">
+              <label for="new-password">New Password</label>
+              <input type="password" id="new-password" placeholder="Enter new password">
+            </div>
+            <div class="form-group">
+              <label for="confirm-password">Confirm New Password</label>
+              <input type="password" id="confirm-password" placeholder="Confirm new password">
+            </div>
+
+            <div class="form-actions">
+              <button type="button" class="btn-save" onclick="saveSettings()">Save Changes</button>
+              <button type="button" class="btn-cancel" onclick="switchTab('activity')">Cancel</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+  
+  <!-- Create Event Modal -->
+  <div class="modal" id="create-event-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Create New Tree Planting Event</h2>
+        <button class="close-modal" onclick="closeCreateEventModal()">&times;</button>
+      </div>
+      
+      <div class="modal-body">
+        <form id="event-form">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-title">Event Title</label>
+              <input type="text" id="event-title" placeholder="Event name" required>
+            </div>
+            
+            <div class="form-group">
+              <label for="event-location">Location</label>
+              <input type="text" id="event-location" placeholder="Campus location" required>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-date">Date</label>
+              <input type="date" id="event-date" required>
+            </div>
+            
+            <div class="form-row">
+              <div class="form-group">
+                <label for="start-time">Start Time</label>
+                <input type="time" id="start-time" required>
+              </div>
+              
+              <div class="form-group">
+                <label for="end-time">End Time</label>
+                <input type="time" id="end-time" required>
+              </div>
+            </div>
+          </div>
+          
+          <div class="form-row">
+            <div class="form-group">
+              <label for="event-campus">Campus</label>
+              <select id="event-campus" required>
+                <option value="">Select Campus</option>
+                <option value="main">Main Campus</option>
+                <option value="north">North Campus</option>
+                <option value="south">South Campus</option>
+                <option value="east">East Campus</option>
+              </select>
+            </div>
+            
+            <div class="form-group">
+              <label for="participant-limit">Participant Limit</label>
+              <input type="number" id="participant-limit" placeholder="Max participants" min="1">
+            </div>
+          </div>
+          
+          <div class="form-group">
+            <label for="tree-count">Number of Trees</label>
+            <input type="number" id="tree-count" placeholder="Estimated trees to plant" min="1" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="tree-species">Tree Species</label>
+            <input type="text" id="tree-species" placeholder="Species to be planted" required>
+          </div>
+          
+          <div class="form-group">
+            <label for="event-description">Event Description</label>
+            <textarea id="event-description" placeholder="Describe your event..." required></textarea>
+          </div>
+          
+          <div class="form-group">
+            <label for="organizer">Organized By</label>
+            <input type="text" id="organizer" placeholder="Organization or department" required>
+          </div>
+        </form>
+      </div>
+      
+      <div class="modal-footer">
+        <button class="modal-btn cancel" onclick="closeCreateEventModal()">Cancel</button>
+        <button class="modal-btn submit" onclick="createNewEvent()">Create Event</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Footer -->
+  <footer>
+    <div class="footer-content">
+      <div class="footer-section">
+        <h3>About SEED</h3>
+        <p>SEED is a platform for students and organizations to collaborate on sustainability initiatives, track environmental impact, and create a greener campus community.</p>
+      </div>
+      
+      <div class="footer-section">
+        <h3>Quick Links</h3>
+        <ul class="footer-links">
+          <li><a href="#" onclick="showPage('landing-page')">Home</a></li>
+          <li><a href="#" onclick="showPage('events-page')">Events</a></li>
+          <li><a href="#">Organizations</a></li>
+          <li><a href="#">Sustainability Map</a></li>
+          <li><a href="#">Eco Quizzes</a></li>
+          <li><a href="#">Tree Tracker</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-section">
+        <h3>Resources</h3>
+        <ul class="footer-links">
+          <li><a href="#">Sustainability Guides</a></li>
+          <li><a href="#">Campus Initiatives</a></li>
+          <li><a href="#">Eco Events Calendar</a></li>
+          <li><a href="#">Volunteer Opportunities</a></li>
+          <li><a href="#">Research Papers</a></li>
+        </ul>
+      </div>
+      
+      <div class="footer-section">
+        <h3>Contact Us</h3>
+        <ul class="footer-links">
+          <li><a href="#"><i class="fas fa-envelope"></i> contact@SEED.edu</a></li>
+          <li><a href="#"><i class="fas fa-phone"></i> (123) 456-7890</a></li>
+          <li><a href="#"><i class="fas fa-map-marker-alt"></i> BPSU Main Campus</a></li>
+        </ul>
+      </div>
+    </div>
+    
+    <div class="copyright">
+      © 2025 SEED | BPSU Environmental Sustainability Office Platform. All rights reserved.
+    </div>
+  </footer>
+<script src="script.js"></script>
+</body>
+</html>
