@@ -365,7 +365,7 @@
     }
 
     .hero-right {
-      background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('https://scontent.fmnl13-2.fna.fbcdn.net/v/t39.30808-6/486363162_122168270210333217_2159840675268844310_n.jpg?_nc_cat=111&ccb=1-7&_nc_sid=833d8c&_nc_eui2=AeEgW2uYgvjxtmLbsxyU_lnfQtuwX2CdUgFC27BfYJ1SAY8FGG4bcUrSR2Y699fuj6rNlnBQhMy8KYI7od65Vzei&_nc_ohc=bX_o1TTRrA4Q7kNvwHa6GQQ&_nc_oc=Adl4XMq0NxpVLxKqqo5zOSiqOngcaJ8Tw0AXZEAunYAHtEaK-uCnIZ0WvvtQ_DjdTSg&_nc_zt=23&_nc_ht=scontent.fmnl13-2.fna&_nc_gid=NB1mIaqGKz96aFQIos0mVA&oh=00_AfYJ-M0K-dRKQMwOjRcY9utvOPmhd3oe29GY5UbwWRprsg&oe=68C0C148');
+      background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), url('Landing1.png');
       background-size: cover;
       background-position: center;
       clip-path: polygon(20% 0, 100% 0, 100% 100%, 0 100%);
@@ -2287,3 +2287,10 @@
       cursor: pointer;
       font-size: 16px;
     }
+
+    .post-action.liked i {
+  color: red;
+}
+.post-action.liked {
+  font-weight: bold;
+}

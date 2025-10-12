@@ -1,5 +1,5 @@
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbzu77QDCDC8lrfCfcEs7L4Ri9LAR559Ee0xe7mUts6XRs_v_Ie-ErQ9JchOzhjBsePGFQ/exec";
+  "https://script.google.com/macros/s/AKfycbxKh8mYxXrO30qVZinOZqEoZ5wSemlyEJtk6KLYab_vZIPhM9HvDKorsX6WKbOuKi-R7A/exec";
 let currentUser = null;
 let ecoTrends = {}; // { hashtag: count }
 
@@ -67,6 +67,20 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 });
 
+// ===== Simple Demo Encryption (Base64) =====
+
+function encryptPassword(password) {
+  return btoa(unescape(encodeURIComponent(password))); // text → base64
+}
+
+function decryptPassword(encrypted) {
+  try {
+    return decodeURIComponent(escape(atob(encrypted))); // base64 → text
+  } catch {
+    return ""; // if decoding fails
+  }
+}
+
 // ------------------ POSTS ------------------
 
 async function createPost() {
@@ -82,10 +96,14 @@ async function createPost() {
   }
 
   try {
+    const hashtags = extractHashtags(content);
     const payload = {
       action: "createPost",
-      user_id: currentUser.id,
+      userId: currentUser.id,
+      userName: currentUser.name,
+      userAvatar: currentUser.avatar,
       content,
+      hashtags,
     };
 
     const response = await fetch(API_URL, {
@@ -107,7 +125,7 @@ async function createPost() {
 
       document.getElementById("post-content").value = "";
 
-      // ✅ Log activity
+      // Log activity
       logActivity("post", content);
     } else {
       alert("Failed to post: " + data.message);
@@ -121,7 +139,18 @@ async function createPost() {
 function addPostToFeed(post) {
   const postsContainer = document.getElementById("posts-container");
   const postEl = document.createElement("div");
-  postEl.className = "post"; // ✅ match your CSS
+  postEl.className = "post";
+
+  // Separate comments and meta info
+  const comments = post.comments || [];
+  const realComments = comments.filter((c) => !c._meta);
+  const meta = comments.find((c) => c._meta === "likers");
+
+  // Check if current user liked this post
+  const userLiked =
+    meta && Array.isArray(meta.list)
+      ? meta.list.includes(currentUser?.id)
+      : false;
 
   postEl.innerHTML = `
     <div class="post-user">
@@ -136,11 +165,13 @@ function addPostToFeed(post) {
 
     <div class="post-stats">
       <span>${post.likes || 0} Likes</span>
-      <span>${post.comments?.length || 0} Comments</span>
+      <span>${realComments.length} Comments</span>
     </div>
 
     <div class="post-actions">
-      <div class="post-action like-btn" data-id="${post.id}">
+      <div class="post-action like-btn ${userLiked ? "liked" : ""}" data-id="${
+    post.id
+  }">
         <i class="fas fa-heart"></i> Like
       </div>
       <div class="post-action comment-toggle" data-id="${post.id}">
@@ -150,22 +181,27 @@ function addPostToFeed(post) {
 
     <div class="comments-section hidden" id="comments-${post.id}">
       <div class="comments-list">
-        ${(post.comments || [])
+        ${realComments
           .map(
             (c) =>
               `<div class="comment"><strong>${c.user}:</strong> ${c.text}</div>`
           )
           .join("")}
       </div>
-      <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${
-        post.id
-      }">
+
+      <input 
+        type="text" 
+        placeholder="Write a comment..." 
+        class="comment-input" 
+        data-id="${post.id}">
     </div>
   `;
 
   postsContainer.prepend(postEl);
   setupPostInteractions(postEl);
 }
+
+
 
 
 
@@ -180,11 +216,28 @@ async function loadPosts() {
       body: JSON.stringify({ action: "getPosts" }),
     });
     const data = await response.json();
+    const rawPosts = data.posts || [];
+
+    // Keep only the latest (bottom-most) row for each post id
+    const postMap = {};
+    for (const post of rawPosts) {
+      postMap[post.id] = post;
+    }
+
+    // Convert map to array
+    const posts = Object.values(postMap);
+
+    // 🧩 Normalize and sort by timestamp (newest first)
+    posts.sort((a, b) => {
+      const dateA = parseDate(a.timestamp);
+      const dateB = parseDate(b.timestamp);
+      return dateB - dateA;
+    });
 
     postsContainer.innerHTML = "";
 
-    if (data.success && data.posts.length > 0) {
-      data.posts.forEach((post) => {
+    if (data.success && posts.length > 0) {
+      posts.forEach((post) => {
         addPostToFeed(post);
 
         if (post.hashtags) {
@@ -193,9 +246,10 @@ async function loadPosts() {
           });
         }
       });
+
       renderEcoTrends();
     } else {
-      postsContainer.innerHTML = "<p>No posts yet. Be the first to post!</p>";
+      postsContainer.innerHTML = "<p>No posts yet.</p>";
     }
   } catch (err) {
     console.error("Feed load error:", err);
@@ -203,40 +257,121 @@ async function loadPosts() {
   }
 }
 
+// 🧠 Helper: make timestamps always sortable
+function parseDate(value) {
+  if (!value) return new Date(0);
+  if (typeof value === "string") {
+    // Try to handle formats like "10/12/2025 22:24:54"
+    const parts = value.split(/[\s/:]+/);
+    if (parts.length >= 5) {
+      // Assuming MM/DD/YYYY or DD/MM/YYYY — swap if needed
+      const [p1, p2, p3, h, m] = parts.map(Number);
+      // if month > 12, it's actually DD/MM/YYYY (Philippines format)
+      const [day, month, year] = p1 > 12 ? [p1, p2, p3] : [p2, p1, p3];
+      return new Date(year, month - 1, day, h || 0, m || 0);
+    }
+  }
+  return new Date(value);
+}
+
+
+
 
 function setupPostInteractions(postEl) {
-  // Like
+  // LIKE HANDLER
   postEl.querySelector(".like-btn").addEventListener("click", async (e) => {
     const btn = e.currentTarget;
-    let count = parseInt(btn.textContent.replace("❤️", "").trim()) || 0;
-    count++;
-    btn.textContent = `❤️ ${count}`;
-    // TODO: send to backend
+    const postId = btn.dataset.id;
+
+    // Get counter element inside the post
+    const stats = btn
+      .closest(".post")
+      .querySelector(".post-stats span:first-child");
+    let currentLikes = parseInt(stats.textContent) || 0;
+
+    try {
+      const res = await fetch(API_URL, {
+        method: "POST",
+        body: JSON.stringify({
+          action: "likePost",
+          post_id: postId,
+          user_id: currentUser?.id || "",
+          user_name: currentUser?.name || "",
+          user_avatar: currentUser?.avatar || "",
+        }),
+      });
+
+      const data = await res.json();
+
+      if (data.success) {
+        // Backend accepted the like → update counter
+        stats.textContent = `${data.likes || currentLikes + 1} Likes`;
+      } else if (data.message === "Already liked") {
+        // Backend said user already liked this post
+        alert("You already liked this post!");
+      } else {
+        console.warn("Like rejected:", data.message);
+      }
+
+      // Reload posts after short delay (optional)
+      setTimeout(loadPosts, 300);
+    } catch (err) {
+      console.error("Like error:", err);
+    }
   });
 
-  // Toggle comments
+  // TOGGLE COMMENT BOX
   postEl.querySelector(".comment-toggle").addEventListener("click", (e) => {
     const postId = e.currentTarget.dataset.id;
     document.getElementById(`comments-${postId}`).classList.toggle("hidden");
   });
 
-  // Add comment
+  // COMMENT HANDLER
   postEl
     .querySelector(".comment-input")
     .addEventListener("keypress", async (e) => {
       if (e.key === "Enter" && e.target.value.trim() !== "") {
         const postId = e.target.dataset.id;
-        const newComment = {
-          user: currentUser?.email || "Guest",
-          text: e.target.value,
-        };
+        const text = e.target.value.trim();
         const list = e.target.previousElementSibling;
-        list.innerHTML += `<div class="comment"><strong>${newComment.user}:</strong> ${newComment.text}</div>`;
+        const newComment = {
+          user: currentUser?.name || "Guest",
+          text,
+        };
+
+        // Add to UI instantly
+        const commentHTML = `<div class="comment"><strong>${newComment.user}:</strong> ${newComment.text}</div>`;
+        list.insertAdjacentHTML("beforeend", commentHTML);
         e.target.value = "";
-        // TODO: send to backend
+
+        // Update comment count
+        const stats = e.target
+          .closest(".post")
+          .querySelector(".post-stats span:nth-child(2)");
+        const currentCount = parseInt(stats.textContent) || 0;
+        stats.textContent = `${currentCount + 1} Comments`;
+
+        try {
+          await fetch(API_URL, {
+            method: "POST",
+            body: JSON.stringify({
+              action: "commentPost",
+              post_id: postId,
+              user_id: currentUser?.id || "",
+              user_name: currentUser?.name || "Guest",
+              text,
+            }),
+          });
+
+          // Optional refresh to show latest backend version
+          setTimeout(loadPosts, 800);
+        } catch (err) {
+          console.error("Comment error:", err);
+        }
       }
     });
 }
+
 
 function extractHashtags(text) {
   const regex = /#(\w+)/g; // matches # followed by word chars, no spaces
@@ -289,7 +424,7 @@ if (globalSearchInput) {
         // Call backend
         const response = await fetch(API_URL, {
           method: "POST",
-          body: JSON.stringify({ action: "search", query }),
+          body: JSON.stringify({ action: "globalSearch", query }),
         });
         const data = await response.json();
 
@@ -444,6 +579,7 @@ async function joinEvent(button) {
         action: "joinEvent",
         event_id: eventId,
         user_id: currentUser.id,
+        user_name: currentUser.name,
       }),
     });
 
@@ -473,7 +609,11 @@ async function joinEvent(button) {
 // Load all events
 async function loadEvents() {
   try {
-    const response = await fetch(`${API_URL}?action=getEvents`);
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getEvents" }),
+    });
+
     const data = await response.json();
 
     if (data.success) {
@@ -606,6 +746,7 @@ async function createNewEvent() {
     description: document.getElementById("event-description").value,
     organizer_id: currentUser.id,
   };
+
 
   try {
     const response = await fetch(API_URL, {
@@ -741,7 +882,7 @@ async function login() {
       body: JSON.stringify({
         action: "login",
         username: email,
-        password: password,
+        password: encryptPassword(password),
       }),
     });
 
@@ -785,7 +926,7 @@ async function register() {
         name: name,
         email: email,
         username: username,
-        password: password,
+        password: encryptPassword(password),
         avatar: "https://randomuser.me/api/portraits/lego/1.jpg",
         department: "",
         bio: "New sustainability enthusiast",
