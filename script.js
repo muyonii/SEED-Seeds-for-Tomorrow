@@ -1,7 +1,9 @@
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbxKh8mYxXrO30qVZinOZqEoZ5wSemlyEJtk6KLYab_vZIPhM9HvDKorsX6WKbOuKi-R7A/exec";
+  "https://script.google.com/macros/s/AKfycbxEi9LLvrgU5aKg1eycZz6dr46BbQqjalSWqqc8jdEfcBC7JuU6QoEYZp2yfzJTgefBTA/exec";
 let currentUser = null;
 let ecoTrends = {}; // { hashtag: count }
+// Global event list for filtering
+let allEvents = [];
 
 
 // Initialize on DOM load
@@ -135,7 +137,6 @@ async function createPost() {
   }
 }
 
-
 function addPostToFeed(post) {
   const postsContainer = document.getElementById("posts-container");
   const postEl = document.createElement("div");
@@ -200,10 +201,6 @@ function addPostToFeed(post) {
   postsContainer.prepend(postEl);
   setupPostInteractions(postEl);
 }
-
-
-
-
 
 async function loadPosts() {
   const postsContainer = document.getElementById("posts-container");
@@ -273,9 +270,6 @@ function parseDate(value) {
   }
   return new Date(value);
 }
-
-
-
 
 function setupPostInteractions(postEl) {
   // LIKE HANDLER
@@ -464,8 +458,6 @@ if (globalSearchInput) {
   });
 }
 
-
-
 // ------------------ STATS ------------------
 
 async function loadStats() {
@@ -508,7 +500,9 @@ function animateCounter(el, target) {
     if (start >= target) clearInterval(timer);
   }, step);
 }
+
 // ------------------ PROFILE STATS ------------------
+
 function updateProfileStats() {
   if (!currentUser) return;
 
@@ -563,6 +557,7 @@ function backToEvents() {
 }
 
 // Join an event
+// Enhanced join event function for main events page
 async function joinEvent(button) {
   if (!currentUser) {
     alert("Please login to join events");
@@ -572,7 +567,15 @@ async function joinEvent(button) {
 
   const eventId = button.getAttribute("data-event-id");
 
+  // Prevent re-clicking
+  if (button.classList.contains("joined") || button.disabled) return;
+
   try {
+    // Update button state immediately for better UX
+    button.disabled = true;
+    button.textContent = "Joining...";
+    button.classList.add("joining");
+
     const response = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({
@@ -586,96 +589,227 @@ async function joinEvent(button) {
     const data = await response.json();
 
     if (data.success) {
-      button.innerHTML = '<i class="fas fa-check"></i> Joined';
-      button.classList.remove("join");
+      // Update button state
+      button.textContent = "Joined";
+      button.disabled = true;
+      button.classList.remove("joining");
       button.classList.add("joined");
-      alert("You have successfully joined this event!");
 
-      // ✅ Log activity
-      if (data.event && data.event.title) {
-        logActivity("event-join", data.event.title);
-      } else {
-        logActivity("event-join", `Event ID: ${eventId}`);
-      }
+      // Show success message
+      showToast("Successfully joined the event!");
+
+      // Update participant count in the event card immediately
+      updateEventCardParticipantCount(eventId, true);
+
+      // Refresh events to get updated data from backend
+      setTimeout(() => {
+        loadEvents();
+      }, 1000);
+
+      logActivity("event-join", `Event ID: ${eventId}`);
     } else {
-      alert("Failed to join event: " + data.message);
+      alert(data.message || "Failed to join event.");
+      // Reset button state on failure
+      button.disabled = false;
+      button.textContent = "Join Event";
+      button.classList.remove("joining");
     }
   } catch (error) {
     alert("Error joining event: " + error.message);
+    // Reset button state on error
+    button.disabled = false;
+    button.textContent = "Join Event";
+    button.classList.remove("joining");
   }
 }
 
+// Function to update participant count in event card
+function updateEventCardParticipantCount(eventId, increment = true) {
+  const eventCard = document.querySelector(`[data-event-id="${eventId}"]`)?.closest('.event-card');
+  if (!eventCard) return;
+
+  const participantStat = eventCard.querySelector('.stat-item:nth-child(2) .stat-value');
+  if (participantStat) {
+    const [current, limit] = participantStat.textContent.split('/').map(Number);
+    const newCurrent = increment ? current + 1 : Math.max(0, current - 1);
+    participantStat.textContent = `${newCurrent}/${limit}`;
+  }
+}
 
 // Load all events
 async function loadEvents() {
   try {
+    console.log("Loading events...");
+    const payload = { action: "getEvents" };
+
+    // Include user ID to get participation status
+    if (currentUser) {
+      payload.user_id = currentUser.id;
+    }
+
     const response = await fetch(API_URL, {
       method: "POST",
-      body: JSON.stringify({ action: "getEvents" }),
+      body: JSON.stringify(payload),
     });
 
     const data = await response.json();
+    console.log("Events response:", data);
 
-    if (data.success) {
-      renderEvents(data.events);
+    if (data.success && data.events) {
+      allEvents = data.events;
+      console.log("Events loaded:", allEvents);
+      renderEvents(allEvents);
+      attachEventFilters();
     } else {
       console.error("Failed to load events:", data.message);
+      // Show fallback events for testing
+      showFallbackEvents();
     }
   } catch (error) {
     console.error("Error loading events:", error);
+    // Show fallback events on error
+    showFallbackEvents();
   }
 }
 
+// Fallback function to show sample events if backend fails
+function showFallbackEvents() {
+  const fallbackEvents = [
+    {
+      id: "fallback-1",
+      title: "Campus Tree Planting Day",
+      location: "Main Campus Green",
+      date: "2025-04-15",
+      start_time: "09:00",
+      end_time: "12:00",
+      campus: "main",
+      tree_count: 50,
+      participant_limit: 30,
+      description:
+        "Join us for a morning of tree planting around the main campus.",
+      status: "upcoming",
+      participants: 15,
+      user_joined: false, // Add this field
+    },
+    {
+      id: "fallback-2",
+      title: "Eco Club Planting Event",
+      location: "North Campus Park",
+      date: "2025-04-20",
+      start_time: "10:00",
+      end_time: "14:00",
+      campus: "north",
+      tree_count: 100,
+      participant_limit: 50,
+      description: "Eco Club's monthly tree planting initiative.",
+      status: "upcoming",
+      participants: 25,
+      user_joined: false, // Add this field
+    },
+  ];
+
+  allEvents = fallbackEvents;
+  renderEvents(fallbackEvents);
+}
+
+
 // Render events list
 function renderEvents(events) {
-  const eventsGrid = document.querySelector(".events-grid");
+  const eventsGrid = document.getElementById("events-grid");
+  if (!eventsGrid) {
+    console.error("Events grid element not found!");
+    return;
+  }
+
   eventsGrid.innerHTML = "";
+
+  if (!events || events.length === 0) {
+    eventsGrid.innerHTML =
+      "<p class='no-events'>No events found. Create the first one!</p>";
+    return;
+  }
 
   events.forEach((event) => {
     const eventCard = document.createElement("div");
     eventCard.className = "event-card";
+
+    // Use safe property access with fallbacks
+    const title = event.title || "Untitled Event";
+    const location = event.location || "Location TBD";
+    const date = event.date || "Date TBD";
+    const startTime = event.start_time || "TBD";
+    const endTime = event.end_time || "TBD";
+    const treeCount = event.tree_count || event.tree_count || 0;
+    const participantLimit =
+      event.participant_limit || event.participant_limit || 0;
+    const participants = event.participants || event.participant_count || 0;
+    const description = event.description || "No description available.";
+    const status = event.status || "upcoming";
+    const campus = event.campus || "main";
+
+    // Check if current user has joined this event
+    const hasJoined = checkIfUserJoinedEvent(event);
+
     eventCard.innerHTML = `
       <div class="event-image" 
            style="background-image: linear-gradient(rgba(0,0,0,0.1), rgba(0,0,0,0.1)), 
            url('https://images.unsplash.com/photo-1542601906990-b4d3fb778b09?auto=format&fit=crop&w=800&q=80');">
-        <div class="event-status ${event.status}">
-          ${event.status.charAt(0).toUpperCase() + event.status.slice(1)}
+        <div class="event-status ${status}">
+          ${status.charAt(0).toUpperCase() + status.slice(1)}
         </div>
       </div>
       <div class="event-details">
-        <h3 class="event-title">${event.title}</h3>
+        <h3 class="event-title">${title}</h3>
         <div class="event-meta">
           <div class="event-meta-item">
-            <i class="fas fa-calendar"></i> ${formatEventDate(event.date)}
+            <i class="fas fa-calendar"></i> ${formatEventDate(date)}
           </div>
           <div class="event-meta-item">
             <i class="fas fa-clock"></i> 
-            ${formatEventTime(event.start_time)} - ${formatEventTime(event.end_time)}
+            ${formatEventTime(startTime)} - ${formatEventTime(endTime)}
           </div>
           <div class="event-meta-item">
-            <i class="fas fa-map-marker-alt"></i> ${event.location}
+            <i class="fas fa-map-marker-alt"></i> ${location}
           </div>
         </div>
-        <p class="event-description">${event.description}</p>
+        <p class="event-description">${description}</p>
         <div class="event-stats">
           <div class="stat-item">
-            <div class="stat-value">${event.tree_count}</div>
+            <div class="stat-value">${treeCount}</div>
             <div class="stat-label">Trees</div>
           </div>
           <div class="stat-item">
-            <div class="stat-value">${event.participants || 0}/${event.participant_limit}</div>
+            <div class="stat-value">${participants}/${participantLimit}</div>
             <div class="stat-label">Participants</div>
           </div>
           <div class="stat-item">
-            <div class="stat-value">${getDaysLeft(event.date)}</div>
+            <div class="stat-value">${getDaysLeft(date)}</div>
             <div class="stat-label">Days Left</div>
           </div>
         </div>
         <div class="event-actions">
-          <button class="event-btn join" data-event-id="${event.id}" onclick="joinEvent(this)">
-            Join Event
+          <button class="event-btn ${hasJoined ? "joined" : "join"} ${
+      participants >= participantLimit && participantLimit > 0 ? "disabled" : ""
+    }" 
+                  data-event-id="${event.id}" 
+                  onclick="joinEvent(this)"
+                  ${
+                    hasJoined ||
+                    (participants >= participantLimit && participantLimit > 0)
+                      ? "disabled"
+                      : ""
+                  }>
+            ${
+              hasJoined
+                ? "Joined"
+                : participants >= participantLimit && participantLimit > 0
+                ? "Event Full"
+                : "Join Event"
+            }
           </button>
-          <button class="event-btn view" onclick="viewEventDetails('${event.id}')">
+          <button class="event-btn view" onclick="viewEventDetails('${
+            event.id
+          }')">
             Details
           </button>
         </div>
@@ -685,7 +819,26 @@ function renderEvents(events) {
   });
 }
 
+// Function to check if current user has joined an event
+function checkIfUserJoinedEvent(event) {
+  if (!currentUser) return false;
+
+  // Check if event has participants array and current user is in it
+  if (event.participants && Array.isArray(event.participants)) {
+    return event.participants.some(
+      (participant) =>
+        participant.id === currentUser.id ||
+        participant.user_id === currentUser.id
+    );
+  }
+
+  // Fallback: Check if we have this information in the event object
+  return event.user_joined || false;
+}
+
 // Load single event details
+// Load event details with complete information
+// Enhanced loadEventDetails function
 async function loadEventDetails() {
   const eventId = sessionStorage.getItem("currentEventId");
   if (!eventId) return;
@@ -699,28 +852,473 @@ async function loadEventDetails() {
 
     if (data.success && data.event) {
       const event = data.event;
+      console.log("Event details received:", event);
+      
+      // Update banner section
+      document.getElementById("event-title-large").textContent = event.title || "Untitled Event";
+      
+      // Update meta information with proper formatting
+      document.getElementById("event-date-text").textContent = formatEventDate(event.date);
+      document.getElementById("event-time-text").textContent = 
+        `${safeFormatTime(event.start_time)} - ${safeFormatTime(event.end_time)}`;
+      document.getElementById("event-location-text").textContent = event.location || "Location TBD";
+      document.getElementById("event-campus-text").textContent = 
+        formatCampusName(event.campus);
 
-      // Banner
-      document.querySelector("#event-detail-page .event-title-large").textContent = event.title;
-      document.querySelector("#event-detail-page .event-subtitle").textContent =
-        "Join us in making our campus greener, one tree at a time";
+      // Update description
+      document.getElementById("event-description-detail").textContent = 
+        event.description || "No description available.";
 
-      const metaItems = document.querySelectorAll("#event-detail-page .event-header-meta .event-meta-item");
-      metaItems[0].innerHTML = `<i class="fas fa-calendar"></i> ${formatEventDate(event.date)}`;
-      metaItems[1].innerHTML = `<i class="fas fa-clock"></i> ${formatEventTime(event.start_time)} - ${formatEventTime(event.end_time)}`;
-      metaItems[2].innerHTML = `<i class="fas fa-map-marker-alt"></i> ${event.location}`;
+      // Update event details grid
+      const treeCount = event.tree_count || 0;
+      document.getElementById("event-tree-count").textContent = treeCount;
+      
+      const participantCount = event.participants ? event.participants.length : 0;
+      const participantLimit = event.participant_limit || 0;
+      document.getElementById("event-participant-count").textContent = 
+        `${participantCount}/${participantLimit}`;
+      
+      // Calculate environmental impact
+      const co2Reduction = treeCount * 48; // Average kg CO2 per tree annually
+      document.getElementById("event-impact").textContent = 
+        `${co2Reduction} kg CO₂ reduction annually`;
+      
+      document.getElementById("event-status").textContent = 
+        formatStatus(event.status);
 
-      // Description
-      document.querySelector("#event-detail-page .event-description-detail").textContent = event.description;
+      // Update schedule with safe time formatting
+      document.getElementById("event-start-time").textContent = safeFormatTime(event.start_time);
+      document.getElementById("event-end-time").textContent = safeFormatTime(event.end_time);
 
-      // Participants count (TODO: fetch participants list later)
-      document.querySelector("#event-detail-page .participants-header h2").textContent =
-        `Participants (${event.participants || 0}/${event.participant_limit})`;
+      // Update progress bar
+      updateProgressBar(participantCount, participantLimit);
+
+      // Update quick stats
+      document.getElementById("event-duration").textContent = calculateEventDuration(event.start_time, event.end_time);
+      document.getElementById("event-days-left").textContent = getDaysLeft(event.date);
+      document.getElementById("event-campus-name").textContent = formatCampusName(event.campus);
+
+      // Update organizer information
+      updateOrganizerInfo(event);
+
+      // Update join button state
+      updateJoinButtonState(event);
+      
+    } else {
+      console.error("Failed to load event details:", data.message);
+      showErrorState();
     }
   } catch (error) {
     console.error("Error loading event details:", error);
+    showErrorState();
   }
 }
+
+// Safe time formatting function
+function safeFormatTime(timeValue) {
+  if (!timeValue) return "TBD";
+  
+  // If it's already a properly formatted time string (HH:MM)
+  if (typeof timeValue === 'string' && timeValue.match(/^\d{1,2}:\d{2}$/)) {
+    return formatEventTime(timeValue);
+  }
+  
+  // If it's a date string or Google Sheets serial number
+  if (typeof timeValue === 'number') {
+    // Convert Google Sheets serial number to time
+    const date = new Date((timeValue - 25569) * 86400 * 1000);
+    return Utilities.formatDate(date, "Asia/Manila", "HH:mm");
+  }
+  
+  // If it's a full date string, extract time part
+  if (typeof timeValue === 'string' && timeValue.includes('T')) {
+    try {
+      const date = new Date(timeValue);
+      if (!isNaN(date)) {
+        return date.toLocaleTimeString('en-US', { 
+          hour: 'numeric', 
+          minute: '2-digit',
+          hour12: true 
+        });
+      }
+    } catch (e) {
+      console.warn("Could not parse time:", timeValue);
+    }
+  }
+  
+  return "TBD";
+}
+
+// Enhanced calculateEventDuration function
+function calculateEventDuration(startTime, endTime) {
+  if (!startTime || !endTime) return "Unknown";
+  
+  try {
+    // Parse times safely
+    const parseTime = (timeStr) => {
+      if (!timeStr) return null;
+      
+      // Handle HH:MM format
+      if (typeof timeStr === 'string' && timeStr.match(/^\d{1,2}:\d{2}$/)) {
+        const [hours, minutes] = timeStr.split(':').map(Number);
+        const date = new Date();
+        date.setHours(hours, minutes, 0, 0);
+        return date;
+      }
+      
+      // Handle Google Sheets serial numbers
+      if (typeof timeStr === 'number') {
+        return new Date((timeStr - 25569) * 86400 * 1000);
+      }
+      
+      // Handle ISO strings
+      if (typeof timeStr === 'string') {
+        const date = new Date(timeStr);
+        return isNaN(date) ? null : date;
+      }
+      
+      return null;
+    };
+
+    const start = parseTime(startTime);
+    const end = parseTime(endTime);
+    
+    if (!start || !end) return "Unknown";
+
+    let diff = (end - start) / (1000 * 60 * 60); // Convert to hours
+    
+    // Handle overnight events
+    if (diff < 0) {
+      diff += 24;
+    }
+
+    if (diff < 1) {
+      const minutes = Math.round(diff * 60);
+      return `${minutes} minute${minutes !== 1 ? 's' : ''}`;
+    } else if (diff === 1) {
+      return "1 hour";
+    } else {
+      // Show decimal for partial hours
+      const rounded = Math.round(diff * 2) / 2; // Round to nearest 0.5
+      return `${rounded} hours`;
+    }
+  } catch (error) {
+    console.error("Error calculating duration:", error);
+    return "Unknown";
+  }
+}
+
+// Update progress bar
+function updateProgressBar(participantCount, participantLimit) {
+  const progressFill = document.getElementById("participant-progress-fill");
+  const progressText = document.getElementById("participant-progress-text");
+  
+  let progressPercent = 0;
+  if (participantLimit > 0) {
+    progressPercent = Math.min((participantCount / participantLimit) * 100, 100);
+  }
+  
+  progressFill.style.width = `${progressPercent}%`;
+  progressText.textContent = `${participantCount}/${participantLimit} spots filled`;
+}
+
+// Update organizer information
+function updateOrganizerInfo(event) {
+  const organizerName = document.getElementById("organizer-name");
+  const organizerAvatar = document.querySelector(".organizer-avatar");
+  
+  if (organizerName) {
+    organizerName.textContent = event.organizer_name || "SEED Platform";
+  }
+  
+  if (organizerAvatar && event.organizer_avatar) {
+    organizerAvatar.src = event.organizer_avatar;
+    organizerAvatar.alt = event.organizer_name || "Organizer";
+  }
+}
+
+// Format campus name
+function formatCampusName(campus) {
+  if (!campus) return "Main Campus";
+  return campus.charAt(0).toUpperCase() + campus.slice(1) + " Campus";
+}
+
+// Format status
+function formatStatus(status) {
+  if (!status) return "Upcoming";
+  return status.charAt(0).toUpperCase() + status.slice(1);
+}
+
+// Enhanced join event function for detail page
+async function joinEventDetail() {
+  if (!currentUser) {
+    alert("Please login to join events");
+    showPage("login-page");
+    return;
+  }
+
+  const eventId = sessionStorage.getItem("currentEventId");
+  const joinBtn = document.getElementById("join-event-btn");
+
+  if (joinBtn.disabled) return;
+
+  try {
+    joinBtn.disabled = true;
+    joinBtn.textContent = "Joining...";
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "joinEvent",
+        event_id: eventId,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      joinBtn.textContent = "Joined!";
+      joinBtn.disabled = true;
+      joinBtn.classList.add("joined");
+      
+      showToast("Successfully joined the event!");
+      
+      // Reload event details to update participant count
+      setTimeout(() => {
+        loadEventDetails();
+      }, 1000);
+      
+      logActivity("event-join", `Joined: ${document.getElementById("event-title-large").textContent}`);
+    } else {
+      alert(data.message || "Failed to join event.");
+      joinBtn.disabled = false;
+      joinBtn.textContent = "Join Event";
+    }
+  } catch (error) {
+    alert("Error joining event: " + error.message);
+    joinBtn.disabled = false;
+    joinBtn.textContent = "Join Event";
+  }
+}
+
+// Update join button state
+function updateJoinButtonState(event) {
+  const joinBtn = document.getElementById("join-event-btn");
+  if (!joinBtn) return;
+
+  const participantCount = event.participants ? event.participants.length : 0;
+  const participantLimit = event.participant_limit || 0;
+  
+  if (!currentUser) {
+    joinBtn.textContent = "Login to Join";
+    joinBtn.disabled = true;
+    return;
+  }
+
+  // Check if user is already participating
+  const isParticipating = event.participants && 
+    event.participants.some(p => p.id === currentUser.id);
+  
+  if (isParticipating) {
+    joinBtn.textContent = "Already Joined";
+    joinBtn.disabled = true;
+    joinBtn.classList.add("joined");
+  } else if (participantCount >= participantLimit && participantLimit > 0) {
+    joinBtn.textContent = "Event Full";
+    joinBtn.disabled = true;
+  } else {
+    joinBtn.textContent = "Join Event";
+    joinBtn.disabled = false;
+    joinBtn.classList.remove("joined");
+  }
+}
+
+// Helper function to calculate event duration
+function calculateEventDuration(startTime, endTime) {
+  if (!startTime || !endTime) return "Unknown";
+  
+  try {
+    const start = new Date(`2000-01-01T${startTime}`);
+    const end = new Date(`2000-01-01T${endTime}`);
+    const diff = (end - start) / (1000 * 60 * 60); // Convert to hours
+    
+    if (diff < 1) {
+      return `${Math.round(diff * 60)} minutes`;
+    } else if (diff === 1) {
+      return "1 hour";
+    } else {
+      return `${Math.round(diff)} hours`;
+    }
+  } catch {
+    return "Unknown";
+  }
+}
+
+// Update join button based on user's participation status
+function updateJoinButtonState(event) {
+  const joinBtn = document.getElementById("join-event-btn");
+  const participantCount = event.participants ? event.participants.length : 0;
+  const participantLimit = event.participant_limit || 0;
+  
+  if (!currentUser) {
+    joinBtn.textContent = "Login to Join";
+    joinBtn.disabled = true;
+    return;
+  }
+
+  // Check if user is already participating
+  const isParticipating = event.participants && 
+    event.participants.some(p => p.id === currentUser.id);
+  
+  if (isParticipating) {
+    joinBtn.textContent = "Already Joined";
+    joinBtn.disabled = true;
+    joinBtn.classList.add("joined");
+  } else if (participantCount >= participantLimit && participantLimit > 0) {
+    joinBtn.textContent = "Event Full";
+    joinBtn.disabled = true;
+  } else {
+    joinBtn.textContent = "Join Event";
+    joinBtn.disabled = false;
+    joinBtn.classList.remove("joined");
+  }
+}
+
+// Enhanced join event function for detail page
+async function joinEventDetail() {
+  if (!currentUser) {
+    alert("Please login to join events");
+    showPage("login-page");
+    return;
+  }
+
+  const eventId = sessionStorage.getItem("currentEventId");
+  const joinBtn = document.getElementById("join-event-btn");
+
+  // Prevent multiple clicks
+  if (joinBtn.disabled) return;
+
+  try {
+    joinBtn.disabled = true;
+    joinBtn.textContent = "Joining...";
+
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "joinEvent",
+        event_id: eventId,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      joinBtn.textContent = "Joined!";
+      joinBtn.classList.add("joined");
+      
+      // Show success message
+      showToast("Successfully joined the event!");
+      
+      // Reload event details to update participant count
+      setTimeout(() => {
+        loadEventDetails();
+      }, 1000);
+      
+      logActivity("event-join", `Joined: ${document.getElementById("event-title-large").textContent}`);
+    } else {
+      alert(data.message || "Failed to join event.");
+      joinBtn.disabled = false;
+      joinBtn.textContent = "Join Event";
+    }
+  } catch (error) {
+    alert("Error joining event: " + error.message);
+    joinBtn.disabled = false;
+    joinBtn.textContent = "Join Event";
+  }
+}
+
+// Show error state
+function showErrorState() {
+  document.getElementById("event-title-large").textContent = "Event Not Found";
+  document.getElementById("event-description-detail").textContent = 
+    "Sorry, we couldn't load the event details. Please try again later.";
+}
+
+// Toast notification function
+function showToast(message) {
+  const toast = document.createElement("div");
+  toast.className = "toast";
+  toast.textContent = message;
+  toast.style.cssText = `
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: #2e7d32;
+    color: white;
+    padding: 1rem 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    z-index: 1000;
+    animation: slideIn 0.3s ease;
+  `;
+  
+  document.body.appendChild(toast);
+  
+  setTimeout(() => {
+    toast.remove();
+  }, 3000);
+}
+
+// Add this CSS for toast animation
+const toastStyles = `
+@keyframes slideIn {
+  from {
+    transform: translateX(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+`;
+
+// Inject toast styles
+const styleSheet = document.createElement("style");
+styleSheet.textContent = toastStyles;
+document.head.appendChild(styleSheet);
+
+async function refreshEventDetails() {
+  const eventId = sessionStorage.getItem("currentEventId");
+  if (!eventId) return;
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getEventDetails", event_id: eventId }),
+    });
+    const data = await response.json();
+
+    if (data.success && data.event) {
+      const event = data.event;
+      const count = event.participants?.length || 0;
+      const limit = event.participant_limit || 0;
+
+      // Update participant count text
+      const header = document.querySelector(
+        "#event-detail-page .participants-header h2"
+      );
+      if (header) header.textContent = `Participants (${count}/${limit})`;
+    }
+  } catch (err) {
+    console.error("Error refreshing event details:", err);
+  }
+}
+
 
 // Create event modal functions
 function openCreateEventModal() {
@@ -765,48 +1363,194 @@ async function createNewEvent() {
   }
 }
 
+let editingEventId = null;
+
+function openEditEvent(eventId) {
+  const event = allEvents.find((e) => e.id === eventId);
+  if (!event) return;
+
+  editingEventId = eventId;
+
+  // Prefill modal fields
+  document.getElementById("event-title").value = event.title;
+  document.getElementById("event-location").value = event.location;
+  document.getElementById("event-date").value = event.date;
+  document.getElementById("start-time").value = event.start_time;
+  document.getElementById("end-time").value = event.end_time;
+  document.getElementById("event-campus").value = event.campus;
+  document.getElementById("tree-count").value = event.tree_count;
+  document.getElementById("participant-limit").value = event.participant_limit;
+  document.getElementById("event-description").value = event.description;
+
+  document.getElementById("create-event-modal").style.display = "flex";
+  document.querySelector("#create-event-modal .modal-title").textContent =
+    "Edit Event";
+  document.querySelector("#create-event-modal .event-submit-btn").textContent =
+    "Save Changes";
+}
+
+async function saveEventChanges() {
+  const payload = {
+    action: "updateEvent",
+    event_id: editingEventId,
+    title: document.getElementById("event-title").value,
+    location: document.getElementById("event-location").value,
+    date: document.getElementById("event-date").value,
+    start_time: document.getElementById("start-time").value,
+    end_time: document.getElementById("end-time").value,
+    campus: document.getElementById("event-campus").value,
+    tree_count: document.getElementById("tree-count").value,
+    participant_limit: document.getElementById("participant-limit").value,
+    description: document.getElementById("event-description").value,
+    organizer_id: currentUser.id,
+  };
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+
+    if (data.success) {
+      alert("Event updated successfully!");
+      closeCreateEventModal();
+      loadEvents();
+      editingEventId = null;
+    } else {
+      alert("Update failed: " + data.message);
+    }
+  } catch (err) {
+    alert("Error updating event: " + err.message);
+  }
+}
+
+function attachEventFilters() {
+  const searchInput = document.getElementById("event-search");
+  const campusFilter = document.getElementById("filter-campus");
+  const statusFilter = document.getElementById("filter-status");
+
+  if (!searchInput || !campusFilter || !statusFilter) return;
+
+  // Listen to changes
+  searchInput.addEventListener("input", filterEvents);
+  campusFilter.addEventListener("change", filterEvents);
+  statusFilter.addEventListener("change", filterEvents);
+}
+
+function filterEvents() {
+  const search =
+    document.getElementById("event-search")?.value.toLowerCase() || "";
+  const campus = document.getElementById("filter-campus")?.value || "all";
+  const status = document.getElementById("filter-status")?.value || "all";
+
+  let filtered = allEvents.filter((event) => {
+    const matchesSearch =
+      event.title.toLowerCase().includes(search) ||
+      event.location.toLowerCase().includes(search);
+
+    const matchesCampus =
+      campus === "all" || event.campus.toLowerCase() === campus.toLowerCase();
+
+    const matchesStatus =
+      status === "all" || event.status.toLowerCase() === status.toLowerCase();
+
+    return matchesSearch && matchesCampus && matchesStatus;
+  });
+
+  renderEvents(filtered);
+}
+
+
 // --------- HELPERS ---------
 
+// Enhanced date formatting
 function formatEventDate(dateString) {
-  if (!dateString) return "";
-  const date = new Date(dateString);
-  if (isNaN(date)) return dateString;
-  return date.toLocaleDateString("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
-function formatEventTime(timeString) {
-  if (!timeString) return "";
-
-  // HH:mm format
-  const parts = timeString.split(":");
-  if (parts.length >= 2) {
-    const [hour, minute] = parts.map(Number);
-    const date = new Date();
-    date.setHours(hour, minute);
-    return date.toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
+  if (!dateString) return "Date TBD";
+  
+  try {
+    // Handle Google Sheets serial numbers
+    if (typeof dateString === 'number') {
+      const date = new Date((dateString - 25569) * 86400 * 1000);
+      return date.toLocaleDateString("en-US", {
+        weekday: "long",
+        month: "long",
+        day: "numeric",
+        year: "numeric",
+      });
+    }
+    
+    // Handle string dates
+    const date = new Date(dateString);
+    if (isNaN(date)) {
+      // Try parsing different formats
+      const parts = dateString.split(/[-/]/);
+      if (parts.length >= 3) {
+        const dateObj = new Date(parts[0], parts[1] - 1, parts[2]);
+        if (!isNaN(dateObj)) {
+          return dateObj.toLocaleDateString("en-US", {
+            weekday: "long",
+            month: "long",
+            day: "numeric",
+            year: "numeric",
+          });
+        }
+      }
+      return "Invalid Date";
+    }
+    
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      month: "long",
+      day: "numeric",
+      year: "numeric",
     });
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Date TBD";
   }
-
-  return timeString;
 }
 
-function getDaysLeft(eventDate) {
+// Enhanced time formatting
+function formatEventTime(timeString) {
+  if (!timeString) return "TBD";
+  
+  try {
+    // Handle HH:MM format directly
+    if (typeof timeString === 'string' && timeString.match(/^\d{1,2}:\d{2}$/)) {
+      const [hours, minutes] = timeString.split(':').map(Number);
+      const date = new Date();
+      date.setHours(hours, minutes);
+      return date.toLocaleTimeString('en-US', { 
+        hour: 'numeric', 
+        minute: '2-digit',
+        hour12: true 
+      });
+    }
+    
+    return safeFormatTime(timeString);
+  } catch (error) {
+    console.error("Time formatting error:", error);
+    return "TBD";
+  }
+}
+
+function getDaysLeft(dateString) {
+  if (!dateString) return 0;
+
   const today = new Date();
-  const eventDay = new Date(eventDate);
-  const diffTime = eventDay - today;
-  return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+  const eventDate = new Date(dateString);
+
+  // If the date is invalid, return 0
+  if (isNaN(eventDate.getTime())) return 0;
+
+  const diff = eventDate - today;
+  return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
 }
 
-
-
-
+function backToEvents() {
+  showPage("events-page");
+}
 
 
 // ======================================================
@@ -830,43 +1574,65 @@ function updateLoginState() {
 function updateProfileData() {
   if (!currentUser) return;
 
-  // Update all avatar images
+  // === Avatar updates ===
   const avatars = document.querySelectorAll(
     ".user-avatar, .profile-avatar, #profile-avatar"
   );
   avatars.forEach((avatar) => {
-    avatar.src = currentUser.avatar;
+    avatar.src = currentUser.avatar || "https://via.placeholder.com/150";
   });
 
-  // Sidebar profile (social feed page)
+  // === Sidebar profile (social feed) ===
   if (document.getElementById("profile-sidebar-name")) {
-    document.getElementById("profile-sidebar-name").textContent = currentUser.name;
+    document.getElementById("profile-sidebar-name").textContent =
+      currentUser.name || "Guest User";
   }
-
-  // Profile page large
-  if (document.getElementById("profile-name-large")) {
-    document.getElementById("profile-name-large").textContent = currentUser.name;
-  }
-
-  // Handles
   if (document.getElementById("profile-sidebar-handle")) {
-    document.getElementById("profile-sidebar-handle").textContent = `@${currentUser.username}`;
+    document.getElementById("profile-sidebar-handle").textContent = `@${
+      currentUser.username || "guest_user"
+    }`;
   }
-  if (document.getElementById("profile-handle-large")) {
-    document.getElementById("profile-handle-large").textContent = `@${currentUser.username}`;
-  }
-
-  // Bios
   if (document.getElementById("profile-sidebar-bio")) {
-    document.getElementById("profile-sidebar-bio").textContent = currentUser.bio;
-  }
-  if (document.getElementById("profile-bio-large")) {
-    document.getElementById("profile-bio-large").textContent = currentUser.bio;
+    document.getElementById("profile-sidebar-bio").textContent =
+      currentUser.bio && currentUser.bio.trim() !== ""
+        ? currentUser.bio
+        : "This user hasn’t added a bio yet.";
   }
 
-  // Fill settings form
+  // === Profile Page (main profile) ===
+  // Full name
+  if (document.getElementById("profile-name-large")) {
+    document.getElementById("profile-name-large").textContent =
+      currentUser.name || "Guest User";
+  }
+
+  // Department (NEW)
+  if (document.getElementById("profile-department")) {
+    document.getElementById("profile-department").textContent =
+      currentUser.department && currentUser.department.trim() !== ""
+        ? currentUser.department
+        : "No Department";
+  }
+
+  // Handle (@username)
+  if (document.getElementById("profile-handle-large")) {
+    document.getElementById("profile-handle-large").textContent = `@${
+      currentUser.username || "guest_user"
+    }`;
+  }
+
+  // Bio
+  if (document.getElementById("profile-bio")) {
+    document.getElementById("profile-bio").textContent =
+      currentUser.bio && currentUser.bio.trim() !== ""
+        ? currentUser.bio
+        : "This user hasn’t added a bio yet.";
+  }
+
+  // === Settings form fields ===
   fillSettingsForm();
 }
+
 
 // ======================================================
 // LOGIN / REGISTER / LOGOUT
@@ -888,19 +1654,25 @@ async function login() {
 
     const data = await response.json();
 
-    if (data.success) {
-      currentUser = data.user;
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-      updateLoginState();
-      updateProfileData();
-      showPage("landing-page");
-    } else {
-      alert("Login failed: " + data.message);
-    }
+if (data.success) {
+  currentUser = {
+    ...data.user,
+    password: encryptPassword(password), // store for refresh after saveSettings
+  };
+  localStorage.setItem("currentUser", JSON.stringify(currentUser));
+
+  updateLoginState();
+  updateProfileData();
+  fillSettingsForm(); // ✅ ensure form reflects the new user
+  showPage("landing-page");
+} else {
+  alert("Login failed: " + data.message);
+}
   } catch (error) {
     alert("Error: " + error.message);
   }
 }
+
 
 async function register() {
   const name = document.getElementById("reg-name").value;
@@ -923,9 +1695,9 @@ async function register() {
       method: "POST",
       body: JSON.stringify({
         action: "register",
-        name: name,
-        email: email,
-        username: username,
+        name,
+        email,
+        username,
         password: encryptPassword(password),
         avatar: "https://randomuser.me/api/portraits/lego/1.jpg",
         department: "",
@@ -935,30 +1707,34 @@ async function register() {
 
     const data = await response.json();
 
-    if (data.success) {
-      currentUser = {
-        id: data.user.id,
-        name,
-        email,
-        username,
-        avatar: data.user.avatar,
-        role: "student",
-        department: "",
-        bio: "New sustainability enthusiast",
-      };
+if (data.success) {
+  currentUser = {
+    id: data.user.id,
+    name,
+    email,
+    username,
+    avatar: data.user.avatar,
+    role: "student",
+    department: "",
+    bio: "New sustainability enthusiast",
+    password: encryptPassword(password), // keep encrypted password
+  };
 
-      localStorage.setItem("currentUser", JSON.stringify(currentUser));
-      updateLoginState();
-      updateProfileData();
-      showPage("landing-page");
-      alert("Registration successful! Welcome to SEED");
-    } else {
-      alert("Registration failed: " + data.message);
-    }
+  localStorage.setItem("currentUser", JSON.stringify(currentUser));
+
+  updateLoginState();
+  updateProfileData();
+  fillSettingsForm(); // ✅ refresh settings form for the new user
+  showPage("landing-page");
+  alert("Registration successful! Welcome to SEED");
+} else {
+  alert("Registration failed: " + data.message);
+}
   } catch (error) {
     alert("Registration error: " + error.message);
   }
 }
+
 
 function logout() {
   currentUser = null;
@@ -974,41 +1750,120 @@ function logout() {
 function fillSettingsForm() {
   if (!currentUser) return;
 
-  document.getElementById("display-name").value = currentUser.name;
-  document.getElementById("username").value = currentUser.username;
-  document.getElementById("email").value = currentUser.email;
-  document.getElementById("bio").value = currentUser.bio;
-  document.getElementById("avatar-url").value = currentUser.avatar;
+  // Safely fill all profile fields
+  const setValue = (id, value) => {
+    const el = document.getElementById(id);
+    if (el) el.value = value || "";
+  };
+
+  setValue("display-name", currentUser.name);
+  setValue("username", currentUser.username);
+  setValue("email", currentUser.email);
+  setValue("department", currentUser.department);
+  setValue("bio", currentUser.bio);
+  setValue("avatar-url", currentUser.avatar);
+
+  // Update avatar preview image
+  const preview = document.getElementById("avatar-preview");
+  if (preview) {
+    preview.src =
+      currentUser.avatar || "https://randomuser.me/api/portraits/lego/1.jpg";
+  }
+
+  // Clear password fields for security
+  setValue("current-password", "");
+  setValue("new-password", "");
+  setValue("confirm-password", "");
 }
+
 
 async function saveSettings() {
   if (!currentUser) return;
 
+  // Grab current profile field values
+  const name = document.getElementById("display-name").value.trim();
+  const username = document.getElementById("username").value.trim();
+  const email = document.getElementById("settings-email").value.trim();
+  const bio = document.getElementById("bio").value.trim();
+  const avatar = document.getElementById("avatar-url").value.trim();
+  const department = document.getElementById("department").value.trim();
+
+  // Grab password fields
+  const currentPass = document.getElementById("current-password").value.trim();
+  const newPass = document.getElementById("new-password").value.trim();
+  const confirmPass = document.getElementById("confirm-password").value.trim();
+
+  // Default = keep old password
+  let passwordToSave = currentUser.password;
+
+  // --- Password change logic ---
+  if (currentPass || newPass || confirmPass) {
+    if (!currentPass || !newPass || !confirmPass) {
+      alert("Please fill in all password fields to change your password.");
+      return;
+    }
+
+    const decryptedOld = decryptPassword(currentUser.password);
+    if (currentPass !== decryptedOld) {
+      alert("Current password is incorrect.");
+      return;
+    }
+
+    if (newPass !== confirmPass) {
+      alert("New passwords do not match.");
+      return;
+    }
+
+    passwordToSave = encryptPassword(newPass);
+  }
+
+  // --- Build payload for backend ---
   const payload = {
     action: "updateProfile",
     user_id: currentUser.id,
-    name: document.getElementById("display-name").value,
-    username: document.getElementById("username").value,
-    email: document.getElementById("email").value,
-    bio: document.getElementById("bio").value,
-    avatar: document.getElementById("avatar-url").value,
-    department: document.getElementById("department").value,
+    name,
+    username,
+    email,
+    bio,
+    avatar,
+    department,
+    password: passwordToSave,
   };
 
   try {
     const response = await fetch(API_URL, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-      mode: "cors",
     });
 
     const data = await response.json();
 
     if (data.success) {
-      Object.assign(currentUser, payload);
+      // ✅ Prefer using backend's returned `user` object (fresh + latest)
+      if (data.user) {
+        currentUser = data.user;
+      } else {
+        // fallback if backend doesn’t send full user object
+        currentUser = {
+          ...currentUser,
+          name,
+          username,
+          email,
+          bio,
+          avatar,
+          department,
+          password: passwordToSave,
+        };
+      }
+
       localStorage.setItem("currentUser", JSON.stringify(currentUser));
       updateProfileData();
+
+      // Clear password fields for security
+      document.getElementById("current-password").value = "";
+      document.getElementById("new-password").value = "";
+      document.getElementById("confirm-password").value = "";
+
       alert("Profile updated successfully!");
     } else {
       alert("Update failed: " + (data.message || "Unknown error"));
@@ -1018,6 +1873,11 @@ async function saveSettings() {
     alert("Error updating profile: " + error.message);
   }
 }
+
+
+
+
+
 
 // ======================================================
 // PROFILE TABS

@@ -333,62 +333,168 @@
 </div>
 
 <!-- Event Details Page -->
+<!-- Event Details Page -->
 <div id="event-detail-page" class="page-container">
   <div class="event-detail-container">
+    <!-- Back Button -->
+    <div class="back-nav">
+      <button class="back-btn" onclick="backToEvents()">
+        <i class="fas fa-arrow-left"></i> Back to Events
+      </button>
+    </div>
+
     <!-- Banner -->
-    <div class="event-banner" id="event-banner">
+    <div class="event-banner">
       <div class="event-header">
-        <h1 class="event-title-large" id="event-title-large"></h1>
-        <p class="event-subtitle" id="event-subtitle"></p>
+        <h1 class="event-title-large" id="event-title-large">Event Title</h1>
+        <p class="event-subtitle" id="event-subtitle">Join us in making our campus greener</p>
         <div class="event-header-meta">
-          <div class="event-meta-item" id="event-date-meta"></div>
-          <div class="event-meta-item" id="event-time-meta"></div>
-          <div class="event-meta-item" id="event-location-meta"></div>
+          <div class="event-meta-item" id="event-date-meta">
+            <i class="fas fa-calendar"></i> <span id="event-date-text">Loading...</span>
+          </div>
+          <div class="event-meta-item" id="event-time-meta">
+            <i class="fas fa-clock"></i> <span id="event-time-text">Loading...</span>
+          </div>
+          <div class="event-meta-item" id="event-location-meta">
+            <i class="fas fa-map-marker-alt"></i> <span id="event-location-text">Loading...</span>
+          </div>
+          <div class="event-meta-item" id="event-campus-meta">
+            <i class="fas fa-university"></i> <span id="event-campus-text">Loading...</span>
+          </div>
         </div>
       </div>
     </div>
 
-    <!-- Content -->
+    <!-- Main Content -->
     <div class="event-detail-content">
-      <!-- About -->
-      <div class="event-section">
-        <h2>About This Event</h2>
-        <p class="event-description-detail" id="event-description-detail"></p>
-        
-        <div class="event-info-grid" id="event-info-grid">
-          <!-- Info cards injected by JS -->
-        </div>
-      </div>
-
-      <!-- Schedule -->
-      <div class="event-section">
-        <h2>Event Schedule</h2>
-        <div class="info-card" id="event-schedule">
-          <!-- Timeline injected by JS -->
-        </div>
-      </div>
-
-      <!-- Participants -->
-      <div class="event-section">
-        <div class="participants-section">
-          <div class="participants-header">
-            <h2 id="participants-header"></h2>
-            <button class="event-btn join" id="join-event-btn" onclick="joinEvent(this)">Join Event</button>
-          </div>
-          <div class="participants-grid" id="participants-grid">
-            <!-- Participants injected by JS -->
+      <!-- Left Column -->
+      <div class="event-main-content">
+        <!-- About Section -->
+        <div class="event-section">
+          <h2>About This Event</h2>
+          <div class="info-card">
+            <p class="event-description-detail" id="event-description-detail">Loading event description...</p>
           </div>
         </div>
+
+        <!-- Event Details Grid -->
+        <div class="event-section">
+          <h2>Event Details</h2>
+          <div class="event-info-grid" id="event-info-grid">
+            <div class="info-card">
+              <div class="info-icon">
+                <i class="fas fa-tree"></i>
+              </div>
+              <div class="info-content">
+                <h3>Trees to Plant</h3>
+                <p id="event-tree-count">0</p>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <i class="fas fa-users"></i>
+              </div>
+              <div class="info-content">
+                <h3>Participants</h3>
+                <p id="event-participant-count">0/0</p>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <i class="fas fa-leaf"></i>
+              </div>
+              <div class="info-content">
+                <h3>Environmental Impact</h3>
+                <p id="event-impact">Calculating...</p>
+              </div>
+            </div>
+            <div class="info-card">
+              <div class="info-icon">
+                <i class="fas fa-calendar-check"></i>
+              </div>
+              <div class="info-content">
+                <h3>Status</h3>
+                <p id="event-status">Loading...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Schedule Section -->
+        <div class="event-section">
+          <h2>Event Schedule</h2>
+          <div class="info-card">
+            <div class="schedule-timeline">
+              <div class="timeline-item">
+                <div class="timeline-time" id="event-start-time">Loading...</div>
+                <div class="timeline-content">
+                  <h4>Event Starts</h4>
+                  <p>Tree planting activities begin</p>
+                </div>
+              </div>
+              <div class="timeline-item">
+                <div class="timeline-time" id="event-end-time">Loading...</div>
+                <div class="timeline-content">
+                  <h4>Event Concludes</h4>
+                  <p>Wrap-up and group photo</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
 
-      <!-- Actions -->
-      <div class="action-section">
-        <button class="action-btn joined" id="joined-btn" style="display:none;">
-          <i class="fas fa-check"></i> You've Joined This Event
-        </button>
-        <button class="action-btn share" id="share-event-btn">
-          <i class="fas fa-share-alt"></i> Share Event
-        </button>
+      <!-- Right Column -->
+      <div class="event-sidebar">
+        <!-- Action Card -->
+        <div class="action-card">
+          <h3>Join This Event</h3>
+          <div class="participant-progress">
+            <div class="progress-bar">
+              <div class="progress-fill" id="participant-progress-fill"></div>
+            </div>
+            <div class="progress-text" id="participant-progress-text">0/0 spots filled</div>
+          </div>
+          <button class="action-btn primary" id="join-event-btn" onclick="joinEventDetail()">
+            <i class="fas fa-plus-circle"></i> Join Event
+          </button>
+          <button class="action-btn secondary" id="share-event-btn">
+            <i class="fas fa-share-alt"></i> Share Event
+          </button>
+          <div class="action-note">
+            <i class="fas fa-info-circle"></i>
+            <span>You'll receive a confirmation and event reminders</span>
+          </div>
+        </div>
+
+        <!-- Organizer Info -->
+        <div class="organizer-card">
+          <h3>Organized By</h3>
+          <div class="organizer-info">
+            <img src="https://via.placeholder.com/50" alt="Organizer" class="organizer-avatar">
+            <div class="organizer-details">
+              <h4 id="organizer-name">SEED Platform</h4>
+              <p>Environmental Sustainability Office</p>
+            </div>
+          </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="stats-card">
+          <h3>Quick Stats</h3>
+          <div class="stat-item">
+            <i class="fas fa-clock"></i>
+            <span>Duration: <strong id="event-duration">Loading...</strong></span>
+          </div>
+          <div class="stat-item">
+            <i class="fas fa-calendar-day"></i>
+            <span>Days Left: <strong id="event-days-left">Loading...</strong></span>
+          </div>
+          <div class="stat-item">
+            <i class="fas fa-map-marked-alt"></i>
+            <span>Campus: <strong id="event-campus-name">Loading...</strong></span>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -494,11 +600,17 @@
     </div>
 
     <div class="profile-details">
-      <div class="profile-name-large" id="profile-name-large">Guest User</div>
-      <div class="profile-handle-large" id="profile-handle-large">@guest_user</div>
-      <div class="profile-bio-large" id="profile-bio">
-        Join SEED to start contributing to a greener community!
-      </div>
+      <div class="profile-header">
+  <div class="profile-header-top">
+    <div class="profile-name-large" id="profile-name-large">Guest User</div>
+    <div class="profile-department" id="profile-department">Department</div>
+  </div>
+  <div class="profile-handle-large" id="profile-handle-large">@guest_user</div>
+  <div class="profile-bio-large" id="profile-bio">
+    Join SEED to start contributing to a greener community!
+  </div>
+</div>
+
 
 <div class="profile-stats-large">
   <div class="stat-large">
@@ -551,7 +663,7 @@
             </div>
             <div class="form-group">
               <label for="email">Email</label>
-              <input type="email" id="email" placeholder="Enter your email">
+              <input type="email" id="settings-email" placeholder="Enter email">
             </div>
             <div class="form-group">
               <label for="bio">Bio</label>
