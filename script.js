@@ -1,5 +1,5 @@
 const API_URL =
-  "https://script.google.com/macros/s/AKfycbxEi9LLvrgU5aKg1eycZz6dr46BbQqjalSWqqc8jdEfcBC7JuU6QoEYZp2yfzJTgefBTA/exec";
+  "https://script.google.com/macros/s/AKfycbzwFAU4xbB5ierkntouCKDkz8ezsAD2Os-kGQ6x9vSxx63fPob8h64i7DpHV3XJrdp5bA/exec";
 let currentUser = null;
 let ecoTrends = {}; // { hashtag: count }
 // Global event list for filtering
@@ -25,7 +25,11 @@ document.addEventListener("DOMContentLoaded", () => {
       );
 
       // Page-specific loading
-      if (pageId === "social-feed-page") loadPosts();
+      // Page-specific loading
+      if (pageId === "social-feed-page") {
+        loadPosts();
+        loadEcoTrends(); // Add this line
+      }
       if (pageId === "events-page") loadEvents();
     }
   }
@@ -115,18 +119,22 @@ async function createPost() {
     const data = await response.json();
 
     if (data.success) {
-      addPostToFeed({
+      // Create new post with actual timestamp from server if available
+      const newPost = {
+        id: data.postId || Date.now().toString(), // Use server ID or fallback
         userId: currentUser.id,
         userName: currentUser.name,
         userAvatar: currentUser.avatar,
         content,
-        timestamp: new Date().toISOString(),
+        timestamp: new Date().toISOString(), // Current time for new post
         likes: 0,
-        comments: 0,
-      });
+        comments: [],
+      };
+
+      addPostToFeed(newPost, true); // true = prepend to top
 
       document.getElementById("post-content").value = "";
-
+      loadEcoTrends();
       // Log activity
       logActivity("post", content);
     } else {
@@ -137,121 +145,329 @@ async function createPost() {
   }
 }
 
-function addPostToFeed(post) {
+// Update UI to reflect user’s liked state correctly
+function addPostToFeed(post, prepend = false) {
   const postsContainer = document.getElementById("posts-container");
   const postEl = document.createElement("div");
   postEl.className = "post";
 
-  // Separate comments and meta info
-  const comments = post.comments || [];
-  const realComments = comments.filter((c) => !c._meta);
-  const meta = comments.find((c) => c._meta === "likers");
-
-  // Check if current user liked this post
-  const userLiked =
-    meta && Array.isArray(meta.list)
-      ? meta.list.includes(currentUser?.id)
-      : false;
+  const processedPost = processPostData(post);
+  const comments = processedPost.comments.filter(c => !c._meta && c.user && c.text);
+  const userLiked = currentUser && processedPost.likers
+    ? processedPost.likers.includes(currentUser.id)
+    : false;
 
   postEl.innerHTML = `
     <div class="post-user">
-      <img src="${post.userAvatar || "default-avatar.png"}" class="post-avatar">
+      <img src="${processedPost.userAvatar || "https://randomuser.me/api/portraits/lego/1.jpg"}" class="post-avatar">
       <div class="post-user-info">
-        <h3>${post.userName}</h3>
-        <p class="timestamp">${new Date(post.timestamp).toLocaleString()}</p>
+        <h3>${processedPost.userName}</h3>
+        <p class="timestamp">${formatPostTimestamp(processedPost.timestamp)}</p>
       </div>
     </div>
 
-    <p class="post-content">${post.content}</p>
+    <p class="post-content">${processedPost.content}</p>
 
     <div class="post-stats">
-      <span>${post.likes || 0} Likes</span>
-      <span>${realComments.length} Comments</span>
+      <span>${processedPost.likes} Likes</span>
+      <span>${comments.length} Comments</span>
     </div>
 
     <div class="post-actions">
-      <div class="post-action like-btn ${userLiked ? "liked" : ""}" data-id="${
-    post.id
-  }">
-        <i class="fas fa-heart"></i> Like
+      <div class="post-action like-btn ${userLiked ? "liked" : ""}" data-id="${processedPost.id}">
+        <i class="fas fa-heart"></i> ${userLiked ? "Liked" : "Like"}
       </div>
-      <div class="post-action comment-toggle" data-id="${post.id}">
+      <div class="post-action comment-toggle" data-id="${processedPost.id}">
         <i class="fas fa-comment"></i> Comment
       </div>
     </div>
 
-    <div class="comments-section hidden" id="comments-${post.id}">
+    <div class="comments-section hidden" id="comments-${processedPost.id}">
       <div class="comments-list">
-        ${realComments
-          .map(
-            (c) =>
-              `<div class="comment"><strong>${c.user}:</strong> ${c.text}</div>`
-          )
-          .join("")}
+        ${comments.map(c => `<div class="comment"><strong>${c.user}:</strong> ${c.text}</div>`).join("")}
       </div>
-
-      <input 
-        type="text" 
-        placeholder="Write a comment..." 
-        class="comment-input" 
-        data-id="${post.id}">
+      <input type="text" placeholder="Write a comment..." class="comment-input" data-id="${processedPost.id}">
     </div>
   `;
 
-  postsContainer.prepend(postEl);
+  if (prepend) postsContainer.prepend(postEl);
+  else postsContainer.appendChild(postEl);
+
   setupPostInteractions(postEl);
 }
 
-async function loadPosts() {
-  const postsContainer = document.getElementById("posts-container");
-  postsContainer.innerHTML = "<p>Loading posts...</p>";
-  ecoTrends = {}; // reset
+// Refresh like buttons using local storage
+function restoreLikedButtons() {
+  const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "[]");
+  likedPosts.forEach(id => {
+    const btn = document.querySelector(`.like-btn[data-id="${id}"]`);
+    if (btn) {
+      btn.classList.add("liked");
+      btn.innerHTML = '<i class="fas fa-heart"></i> Liked';
+    }
+  });
+}
 
+// Replace the current loadPosts function with this improved version
+async function loadPosts() {
   try {
     const response = await fetch(API_URL, {
       method: "POST",
       body: JSON.stringify({ action: "getPosts" }),
     });
     const data = await response.json();
-    const rawPosts = data.posts || [];
 
-    // Keep only the latest (bottom-most) row for each post id
-    const postMap = {};
-    for (const post of rawPosts) {
-      postMap[post.id] = post;
-    }
-
-    // Convert map to array
-    const posts = Object.values(postMap);
-
-    // 🧩 Normalize and sort by timestamp (newest first)
-    posts.sort((a, b) => {
-      const dateA = parseDate(a.timestamp);
-      const dateB = parseDate(b.timestamp);
-      return dateB - dateA;
-    });
-
+    const postsContainer = document.getElementById("posts-container");
     postsContainer.innerHTML = "";
 
-    if (data.success && posts.length > 0) {
-      posts.forEach((post) => {
-        addPostToFeed(post);
-
-        if (post.hashtags) {
-          post.hashtags.forEach((tag) => {
-            ecoTrends[tag] = (ecoTrends[tag] || 0) + 1;
-          });
-        }
-      });
-
-      renderEcoTrends();
+    if (data.success && data.posts && data.posts.length > 0) {
+      data.posts.forEach((post) => addPostToFeed(processPostData(post)));
+      restoreLikedButtons(); // ✅ Restore state after rendering
     } else {
-      postsContainer.innerHTML = "<p>No posts yet.</p>";
+      postsContainer.innerHTML = "<p>No posts yet. Be the first to post!</p>";
+    }
+  } catch (error) {
+    console.error("Error loading posts:", error);
+    document.getElementById("posts-container").innerHTML =
+      "<p>Error loading posts. Please check your connection.</p>";
+  }
+}
+
+// Add this new function to properly process post data from backend
+function processPostData(post) {
+  // Ensure comments parsed correctly
+  let comments = [];
+  if (post.comments) {
+    if (typeof post.comments === "string") {
+      try {
+        comments = JSON.parse(post.comments);
+      } catch {
+        comments = [];
+      }
+    } else if (Array.isArray(post.comments)) {
+      comments = post.comments;
+    }
+  }
+
+  // Extract likers from meta comment if present
+  const likersMeta = comments.find((c) => c._meta === "likers");
+  const likers = likersMeta?.list || [];
+
+  // Normalize likes count
+  let likes =
+    typeof post.likes === "number" ? post.likes : parseInt(post.likes) || 0;
+  if (likes === 0 && Array.isArray(likers)) likes = likers.length;
+
+  // Attach normalized info
+  return {
+    ...post,
+    comments,
+    likes,
+    likers, // <-- add this for local UI
+  };
+}
+
+// Improved like function - update UI immediately without reloading all posts
+async function likePost(button) {
+  if (!currentUser) {
+    alert("Please login to like posts");
+    return;
+  }
+
+  const postId = button.getAttribute("data-id");
+  const postEl = button.closest(".post");
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "likePost",
+        post_id: postId,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+      }),
+    });
+
+    const data = await response.json();
+    if (data.success) {
+      const stats = postEl.querySelector(".post-stats span:first-child");
+      const newCount = data.likes || (parseInt(stats.textContent) || 0) + 1;
+      stats.textContent = `${newCount} Likes`;
+
+      button.classList.add("liked");
+      button.innerHTML = '<i class="fas fa-heart"></i> Liked';
+
+      // Store liked post locally
+      const likedPosts = JSON.parse(localStorage.getItem("likedPosts") || "[]");
+      if (!likedPosts.includes(postId)) {
+        likedPosts.push(postId);
+        localStorage.setItem("likedPosts", JSON.stringify(likedPosts));
+      }
+    } else if (data.message === "Already liked") {
+      button.classList.add("liked");
+      button.innerHTML = '<i class="fas fa-heart"></i> Liked';
     }
   } catch (err) {
-    console.error("Feed load error:", err);
-    postsContainer.innerHTML = "<p>Failed to load posts.</p>";
+    console.error("Like error:", err);
+    alert("Error liking post");
   }
+}
+
+
+// 🧩 NEW: Better date parsing specifically for sorting
+function parseDateForSorting(value) {
+  if (!value) return new Date(0);
+  
+  // If it's already a Date object
+  if (value instanceof Date) return value;
+  
+  // Try direct parsing first
+  const directDate = new Date(value);
+  if (!isNaN(directDate)) return directDate;
+  
+  // Handle Google Sheets format (MM/DD/YYYY HH:MM:SS)
+  if (typeof value === 'string') {
+    // Try common formats
+    const formats = [
+      // MM/DD/YYYY HH:MM:SS
+      /(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2})/,
+      // YYYY-MM-DD HH:MM:SS
+      /(\d{4})-(\d{1,2})-(\d{1,2}) (\d{1,2}):(\d{2}):(\d{2})/,
+      // DD/MM/YYYY HH:MM:SS (common in some regions)
+      /(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2})/,
+    ];
+    
+    for (const format of formats) {
+      const match = value.match(format);
+      if (match) {
+        let year, month, day, hours, minutes, seconds;
+        
+        if (format.source.includes('YYYY-MM-DD')) {
+          // YYYY-MM-DD format
+          [_, year, month, day, hours, minutes, seconds] = match.map(Number);
+        } else {
+          // MM/DD/YYYY or DD/MM/YYYY format
+          const [_, p1, p2, p3, h, m, s] = match.map(Number);
+          
+          // Determine if it's MM/DD/YYYY or DD/MM/YYYY
+          if (p1 > 12) {
+            // p1 is day (DD/MM/YYYY)
+            day = p1;
+            month = p2 - 1;
+            year = p3;
+          } else if (p2 > 12) {
+            // p2 is day (MM/DD/YYYY)
+            month = p1 - 1;
+            day = p2;
+            year = p3;
+          } else {
+            // Ambiguous, assume MM/DD/YYYY (US format)
+            month = p1 - 1;
+            day = p2;
+            year = p3;
+          }
+          
+          hours = h || 0;
+          minutes = m || 0;
+          seconds = s || 0;
+        }
+        
+        const parsedDate = new Date(year, month, day, hours, minutes, seconds);
+        if (!isNaN(parsedDate)) return parsedDate;
+      }
+    }
+    
+    // Try simple date string
+    const simpleDate = new Date(value.split(' ')[0]);
+    if (!isNaN(simpleDate)) return simpleDate;
+  }
+  
+  // Fallback to current date
+  console.warn("Could not parse date, using current date:", value);
+  return new Date();
+}
+
+// 🧩 NEW: Better timestamp display
+function formatPostTimestamp(timestamp) {
+  if (!timestamp) return "Recently";
+
+  let date;
+
+  // Handle different timestamp formats
+  if (typeof timestamp === "string") {
+    date = new Date(timestamp);
+  } else if (timestamp instanceof Date) {
+    date = timestamp;
+  } else {
+    date = new Date(timestamp);
+  }
+
+  // If date is invalid, return fallback
+  if (isNaN(date.getTime())) {
+    return "Recently";
+  }
+
+  const now = new Date();
+  const diffMs = now - date;
+  const diffMins = Math.floor(diffMs / (1000 * 60));
+  const diffHours = Math.floor(diffMs / (1000 * 60 * 60));
+  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+  if (diffMins < 1) return "Just now";
+  if (diffMins < 60) return `${diffMins}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  if (diffDays < 7) return `${diffDays}d ago`;
+
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: diffDays < 365 ? undefined : "numeric",
+  });
+}
+
+// 🧠 Enhanced date parsing helper
+function parseDate(value) {
+  if (!value) return new Date(0);
+
+  // If it's already a Date object or valid date string
+  if (value instanceof Date) return value;
+  if (!isNaN(new Date(value))) return new Date(value);
+
+  // Handle Google Sheets timestamp format (MM/DD/YYYY HH:MM:SS)
+  if (typeof value === "string") {
+    // Try common date formats
+    const formats = [
+      /(\d{1,2})\/(\d{1,2})\/(\d{4}) (\d{1,2}):(\d{2}):(\d{2})/, // MM/DD/YYYY HH:MM:SS
+      /(\d{4})-(\d{1,2})-(\d{1,2})[T ](\d{1,2}):(\d{2}):(\d{2})/, // YYYY-MM-DD HH:MM:SS
+      /(\d{1,2})\/(\d{1,2})\/(\d{4})/, // MM/DD/YYYY
+    ];
+
+    for (const format of formats) {
+      const match = value.match(format);
+      if (match) {
+        if (match.length >= 6) {
+          // Full datetime
+          const [_, month, day, year, hour, minute, second] = match;
+          return new Date(
+            year,
+            month - 1,
+            day,
+            hour || 0,
+            minute || 0,
+            second || 0
+          );
+        } else if (match.length >= 4) {
+          // Date only
+          const [_, month, day, year] = match;
+          return new Date(year, month - 1, day);
+        }
+      }
+    }
+  }
+
+  // Fallback to current date if parsing fails
+  console.warn("Could not parse date:", value);
+  return new Date();
 }
 
 // 🧠 Helper: make timestamps always sortable
@@ -271,99 +487,136 @@ function parseDate(value) {
   return new Date(value);
 }
 
+async function likePost(button) {
+  if (!currentUser) {
+    alert("Please login to like posts");
+    return;
+  }
+
+  const postId = button.getAttribute("data-id");
+  const postEl = button.closest(".post");
+
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({
+        action: "likePost",
+        post_id: postId,
+        user_id: currentUser.id,
+        user_name: currentUser.name,
+      }),
+    });
+
+    const data = await response.json();
+
+    if (data.success) {
+      // Update the like count in the UI
+      const stats = postEl.querySelector(".post-stats span:first-child");
+      const currentLikes = parseInt(stats.textContent) || 0;
+      stats.textContent = `${currentLikes + 1} Likes`;
+
+      // Update button state
+      button.classList.add("liked");
+      button.innerHTML = '<i class="fas fa-heart"></i> Liked';
+
+      // DON'T reload all posts - this preserves the timestamp
+    } else if (data.message === "Already liked") {
+      // Update button to show already liked state
+      button.classList.add("liked");
+      button.innerHTML = '<i class="fas fa-heart"></i> Liked';
+      alert("You already liked this post!");
+    } else {
+      console.warn("Like failed:", data.message);
+    }
+  } catch (err) {
+    console.error("Like error:", err);
+    alert("Error liking post");
+  }
+}
+
 function setupPostInteractions(postEl) {
   // LIKE HANDLER
-  postEl.querySelector(".like-btn").addEventListener("click", async (e) => {
-    const btn = e.currentTarget;
-    const postId = btn.dataset.id;
-
-    // Get counter element inside the post
-    const stats = btn
-      .closest(".post")
-      .querySelector(".post-stats span:first-child");
-    let currentLikes = parseInt(stats.textContent) || 0;
-
-    try {
-      const res = await fetch(API_URL, {
-        method: "POST",
-        body: JSON.stringify({
-          action: "likePost",
-          post_id: postId,
-          user_id: currentUser?.id || "",
-          user_name: currentUser?.name || "",
-          user_avatar: currentUser?.avatar || "",
-        }),
-      });
-
-      const data = await res.json();
-
-      if (data.success) {
-        // Backend accepted the like → update counter
-        stats.textContent = `${data.likes || currentLikes + 1} Likes`;
-      } else if (data.message === "Already liked") {
-        // Backend said user already liked this post
-        alert("You already liked this post!");
-      } else {
-        console.warn("Like rejected:", data.message);
-      }
-
-      // Reload posts after short delay (optional)
-      setTimeout(loadPosts, 300);
-    } catch (err) {
-      console.error("Like error:", err);
-    }
-  });
+  const likeBtn = postEl.querySelector(".like-btn");
+  if (likeBtn) {
+    likeBtn.addEventListener("click", async (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      await likePost(e.currentTarget);
+    });
+  }
 
   // TOGGLE COMMENT BOX
-  postEl.querySelector(".comment-toggle").addEventListener("click", (e) => {
-    const postId = e.currentTarget.dataset.id;
-    document.getElementById(`comments-${postId}`).classList.toggle("hidden");
-  });
+  const commentToggle = postEl.querySelector(".comment-toggle");
+  if (commentToggle) {
+    commentToggle.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const postId = e.currentTarget.dataset.id;
+      const commentsSection = document.getElementById(`comments-${postId}`);
+      if (commentsSection) {
+        commentsSection.classList.toggle("hidden");
+      }
+    });
+  }
 
-  // COMMENT HANDLER
-  postEl
-    .querySelector(".comment-input")
-    .addEventListener("keypress", async (e) => {
+  // ENHANCED COMMENT HANDLER
+  const commentInput = postEl.querySelector(".comment-input");
+  if (commentInput) {
+    commentInput.addEventListener("keypress", async (e) => {
       if (e.key === "Enter" && e.target.value.trim() !== "") {
+        e.preventDefault();
         const postId = e.target.dataset.id;
         const text = e.target.value.trim();
+
+        if (!currentUser) {
+          alert("Please login to comment");
+          return;
+        }
+
+        const postEl = e.target.closest(".post");
         const list = e.target.previousElementSibling;
-        const newComment = {
-          user: currentUser?.name || "Guest",
-          text,
-        };
-
-        // Add to UI instantly
-        const commentHTML = `<div class="comment"><strong>${newComment.user}:</strong> ${newComment.text}</div>`;
-        list.insertAdjacentHTML("beforeend", commentHTML);
-        e.target.value = "";
-
-        // Update comment count
-        const stats = e.target
-          .closest(".post")
-          .querySelector(".post-stats span:nth-child(2)");
-        const currentCount = parseInt(stats.textContent) || 0;
-        stats.textContent = `${currentCount + 1} Comments`;
 
         try {
-          await fetch(API_URL, {
+          const response = await fetch(API_URL, {
             method: "POST",
             body: JSON.stringify({
               action: "commentPost",
               post_id: postId,
-              user_id: currentUser?.id || "",
-              user_name: currentUser?.name || "Guest",
-              text,
+              user_id: currentUser.id,
+              user_name: currentUser.name,
+              text: text,
             }),
           });
 
-          // Optional refresh to show latest backend version
-          setTimeout(loadPosts, 800);
+          const data = await response.json();
+
+          if (data.success) {
+            // Add to UI instantly
+            const commentHTML = `<div class="comment"><strong>${currentUser.name}:</strong> ${text}</div>`;
+            if (list) {
+              list.insertAdjacentHTML("beforeend", commentHTML);
+            }
+            e.target.value = "";
+
+            // Update comment count immediately
+            const stats = postEl.querySelector(".post-stats span:nth-child(2)");
+            const currentCount = parseInt(stats.textContent) || 0;
+            stats.textContent = `${currentCount + 1} Comments`;
+
+            // Refresh the post state to ensure backend data is reflected
+            setTimeout(() => {
+              refreshPostState(postId);
+            }, 500);
+          } else {
+            alert("Failed to add comment: " + data.message);
+          }
         } catch (err) {
           console.error("Comment error:", err);
+          alert("Error adding comment");
         }
       }
     });
+  }
 }
 
 
@@ -377,23 +630,130 @@ function extractHashtags(text) {
   return matches;
 }
 
-function renderEcoTrends() {
-  const trendsContainer = document.getElementById("eco-trends");
-  trendsContainer.innerHTML = "";
+async function loadEcoTrends() {
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getEcoTrends" }),
+    });
 
-  const sorted = Object.entries(ecoTrends).sort((a, b) => b[1] - a[1]); // sort by count desc
+    const data = await response.json();
 
-  if (sorted.length === 0) {
-    trendsContainer.innerHTML = "<p>No trends yet.</p>";
+    if (data.success && data.trends) {
+      renderTrends(data.trends);
+    } else {
+      console.error("Failed to fetch trends:", data.message);
+      // Show empty state
+      renderTrends([]);
+    }
+  } catch (err) {
+    console.error("Error loading eco trends:", err);
+    // Show empty state on error
+    renderTrends([]);
+  }
+}
+
+function renderTrends(trends) {
+  const container = document.getElementById("eco-trends");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  if (!trends || trends.length === 0) {
+    container.innerHTML = `<p class="no-trends">No trending hashtags yet 🌱</p>`;
     return;
   }
 
-  sorted.forEach(([tag, count]) => {
-    const item = document.createElement("div");
-    item.className = "trend-item";
-    item.innerHTML = `${tag} <span class="trend-count">(${count})</span>`;
-    trendsContainer.appendChild(item);
+  trends.forEach((trend, index) => {
+    const trendItem = document.createElement("div");
+    trendItem.className = "trend-item";
+
+    trendItem.innerHTML = `
+      <div class="trend-rank">♡${index + 1}</div>
+      <div class="trend-info">
+        <span class="trend-tag">${trend.hashtag}</span>
+        <span class="trend-count">${trend.count} posts</span>
+      </div>
+    `;
+
+    container.appendChild(trendItem);
   });
+}
+
+function updateLocalPostLikes(postId, newLikeCount, userId) {
+  // This would ideally update a local posts array if you maintain one
+  // For now, we'll trigger a refresh of the affected post
+  setTimeout(() => {
+    refreshPostState(postId);
+  }, 500);
+}
+function updatePostUI(postId, updatedPost) {
+  const postEl = document
+    .querySelector(`.like-btn[data-id="${postId}"]`)
+    ?.closest(".post");
+  if (!postEl) return;
+
+  const processedPost = processPostData(updatedPost);
+  const comments = processedPost.comments;
+  const realComments = comments.filter((c) => !c._meta && c.user && c.text);
+  const likersMeta = comments.find((c) => c._meta === "likers");
+  const likers =
+    likersMeta && Array.isArray(likersMeta.list) ? likersMeta.list : [];
+  const userLiked = currentUser ? likers.includes(currentUser.id) : false;
+
+  // Update like count
+  const likeStats = postEl.querySelector(".post-stats span:first-child");
+  if (likeStats) {
+    likeStats.textContent = `${processedPost.likes} Likes`;
+  }
+
+  // Update comment count
+  const commentStats = postEl.querySelector(".post-stats span:nth-child(2)");
+  if (commentStats) {
+    commentStats.textContent = `${realComments.length} Comments`;
+  }
+
+  // Update like button
+  const likeBtn = postEl.querySelector(".like-btn");
+  if (likeBtn) {
+    likeBtn.classList.toggle("liked", userLiked);
+    likeBtn.innerHTML = `<i class="fas fa-heart"></i> ${
+      userLiked ? "Liked" : "Like"
+    }`;
+  }
+
+  // Update comments list
+  const commentsList = postEl.querySelector(".comments-list");
+  if (commentsList) {
+    commentsList.innerHTML = realComments
+      .map(
+        (comment) => `
+        <div class="comment">
+          <strong>${comment.user}:</strong> ${comment.text}
+        </div>
+      `
+      )
+      .join("");
+  }
+}
+// Enhanced refreshPostState function
+async function refreshPostState(postId) {
+  try {
+    const response = await fetch(API_URL, {
+      method: "POST",
+      body: JSON.stringify({ action: "getPosts" }),
+    });
+    const data = await response.json();
+
+    if (data.success && data.posts) {
+      const updatedPost = data.posts.find((p) => p.id === postId);
+      if (updatedPost) {
+        updatePostUI(postId, updatedPost);
+      }
+    }
+  } catch (error) {
+    console.error("Error refreshing post state:", error);
+  }
 }
 
 
