@@ -72,7 +72,25 @@ document.addEventListener("DOMContentLoaded", () => {
     });
   }
 });
+document.addEventListener("DOMContentLoaded", function () {
+  // Get current and goal values
+  const trees = 12157,
+    treesGoal = 20000;
+  const waste = 6252,
+    wasteGoal = 20000;
+  const carbon = 267454,
+    carbonGoal = 500000;
 
+  // Calculate percentages
+  const treesPercent = (trees / treesGoal) * 100;
+  const wastePercent = (waste / wasteGoal) * 100;
+  const carbonPercent = (carbon / carbonGoal) * 100;
+
+  // Apply to progress bars
+  document.getElementById("trees-fill").style.width = treesPercent + "%";
+  document.getElementById("waste-fill").style.width = wastePercent + "%";
+  document.getElementById("carbon-fill").style.width = carbonPercent + "%";
+});
 // ===== Simple Demo Encryption (Base64) =====
 
 function encryptPassword(password) {

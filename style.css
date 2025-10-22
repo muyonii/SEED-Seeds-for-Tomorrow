@@ -2342,7 +2342,7 @@
 }
 
 .event-banner {
-  background: linear-gradient(135deg, #2e7d32, #4caf50);
+  background: var(--primary);
   color: white;
   padding: 3rem 2rem;
   border-radius: 12px;
@@ -2351,13 +2351,13 @@
 }
 
 .event-title-large {
-  font-size: 2.5rem;
+  font-size: 4rem;
   margin-bottom: 0.5rem;
   font-weight: 700;
 }
 
 .event-subtitle {
-  font-size: 1.2rem;
+  font-size: 2rem;
   opacity: 0.9;
   margin-bottom: 2rem;
 }
@@ -2373,7 +2373,8 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.2rem;
+  color: white;
 }
 
 .event-detail-content {
@@ -2485,7 +2486,7 @@
 .progress-bar {
   background: #e0e0e0;
   border-radius: 10px;
-  height: 8px;
+  height: 20px;
   margin-bottom: 0.5rem;
   overflow: hidden;
 }
@@ -2555,6 +2556,14 @@
 }
 
 /* Organizer Info */
+
+
+#impact-peninsulares img {
+  width: 100%;
+  height: 100%;
+  object-fit: fill;
+    border-radius: 7px;
+}
 .organizer-info {
   display: flex;
   align-items: center;

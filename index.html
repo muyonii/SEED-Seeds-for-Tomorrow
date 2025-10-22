@@ -14,7 +14,7 @@
         <div class="logo-icon">
           <img src="logo.jpg" alt="">
         </div>
-        <div class="logo-text">SEED - Seeds for Tomorrow</div>
+        <div class="logo-text">SEED – Seeds for Tomorrow</div>
       </a>
       
       <div class="search-bar">
@@ -45,7 +45,7 @@
           <div class="user-avatar-container">
             <img src="https://randomuser.me/api/portraits/lego/1.jpg" alt="User" class="user-avatar" id="header-avatar">
             <div class="user-dropdown">
-              <a href="#" class="dropdown-item" onclick="showPage('profile-page')">
+              <a href="#" class="dropdown-item" onclick="showPage('profile-page'); switchTab('activity')">
                 <i class="fas fa-user"></i> Profile
               </a>
               <a href="#" class="dropdown-item" onclick="showPage('profile-page'); switchTab('settings')">
@@ -69,7 +69,7 @@
         <p>The simplest way for students and community members to plant trees around the world and offset their CO2 emissions</p>
         <button class="btn cta" onclick="logTree()">Log a Tree</button>
         <div class="counter">
-          <strong id="tree-counter">0</strong><br>
+          <strong id="tree-counter">12,157</strong><br>
           <span>trees planted across BPSU campuses</span>
         </div>
       </div>
@@ -85,27 +85,27 @@
 
       <div class="stat-cards">
         <div class="stat-card">
-          <h3 class="stat-number" id="trees-count">0</h3>
+          <h3 class="stat-number" id="trees-count">12,157</h3>
           <p class="stat-label">Total Trees Planted</p>
           <div class="progress-bar"><div id="trees-fill" class="fill"></div></div>
-          <p class="goal-label">This month's goal:</p>
+          <p class="goal-label">This year's goal:</p>
           <p class="goal-number">20,000</p>
         </div>
 
         <div class="stat-card">
-          <h3 class="stat-number" id="waste-count">0 kg</h3>
+          <h3 class="stat-number" id="waste-count">6,252 kg</h3>
           <p class="stat-label">Waste Reduced</p>
           <div class="progress-bar"><div id="waste-fill" class="fill"></div></div>
-          <p class="goal-label">This month's goal:</p>
-          <p class="goal-number">8,000 kg</p>
+          <p class="goal-label">This year's goal:</p>
+          <p class="goal-number">20,000 kg</p>
         </div>
 
         <div class="stat-card">
-          <h3 class="stat-number" id="carbon-count" >0 kg</h3>
+          <h3 class="stat-number" id="carbon-count" >267,454 kg</h3>
           <p class="stat-label">Carbon Emissions Reduced</p>
           <div class="progress-bar"><div id="carbon-fill" class="fill"></div></div>
-          <p class="goal-label">This month's goal:</p>
-          <p class="goal-number">20,000 kg</p>
+          <p class="goal-label">This year's goal:</p>
+          <p class="goal-number">500,000 kg</p>
         </div>
       </div>
 
@@ -169,7 +169,7 @@
         </div>
         <div class="orgs-right">
           <div class="orgs-grid">
-            <div>Env Club</div>
+            <div id="impact-peninsulares"><img src="Impact.jpg" alt=""></div>
             <div>Bio Society</div>
             <div>Eco Eng</div>
             <div>Green Chem</div>
@@ -286,44 +286,6 @@
       </button>
     </div>
     
-    <!-- Filters -->
-    <div class="events-filters">
-      <div class="filter-group">
-        <label for="campus-filter">Campus</label>
-        <select id="campus-filter">
-          <option value="all">All Campuses</option>
-          <option value="main">Main Campus</option>
-          <option value="north">North Campus</option>
-          <option value="south">South Campus</option>
-          <option value="east">East Campus</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="date-filter">Date</label>
-        <select id="date-filter">
-          <option value="all">Any Date</option>
-          <option value="week">This Week</option>
-          <option value="month">This Month</option>
-          <option value="upcoming">Upcoming</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="status-filter">Status</label>
-        <select id="status-filter">
-          <option value="all">All Status</option>
-          <option value="upcoming">Upcoming</option>
-          <option value="in-progress">In Progress</option>
-          <option value="completed">Completed</option>
-        </select>
-      </div>
-      
-      <div class="filter-group">
-        <label for="search-filter">Search</label>
-        <input type="text" id="search-filter" placeholder="Event name or location...">
-      </div>
-    </div>
     
     <!-- Event Cards Container -->
     <div class="events-grid" id="events-grid">
@@ -801,33 +763,33 @@
         <ul class="footer-links">
           <li><a href="#" onclick="showPage('landing-page')">Home</a></li>
           <li><a href="#" onclick="showPage('events-page')">Events</a></li>
-          <li><a href="#">Feed</a></li>
+          <li><a href="#" onclick="showPage('social-feed-page')">Feed</a></li>
         </ul>
       </div>
       
       <div class="footer-section">
         <h3>Resources</h3>
         <ul class="footer-links">
-          <li><a href="#">Sustainability Guides</a></li>
-          <li><a href="#">Campus Initiatives</a></li>
-          <li><a href="#">Eco Events Calendar</a></li>
-          <li><a href="#">Volunteer Opportunities</a></li>
-          <li><a href="#">Research Papers</a></li>
+          <li><a href="https://sites.google.com/bpsu.edu.ph/bpsusustainability/news?authuser=0" target="_blank">Sustainability News</a></li>
+          <li><a href="https://sites.google.com/bpsu.edu.ph/bpsusustainability/greenmetrics?authuser=0" target="_blank">Campus Initiatives</a></li>
+          <li><a href="https://sites.google.com/bpsu.edu.ph/bpsusustainability/university-sustainability-plan?authuser=0" target="_blank">University Sustainability Plan</a></li>
+          <li><a href="https://sites.google.com/bpsu.edu.ph/bpsusustainability/bpsu-futures-thinking-program?authuser=0" target="_blank">Volunteer Opportunities</a></li>
+          <li><a href="https://sites.google.com/bpsu.edu.ph/bpsusustainability/greenmetrics/education-research?authuser=0" target="_blank">Research Papers</a></li>
         </ul>
       </div>
       
       <div class="footer-section">
         <h3>Contact Us</h3>
         <ul class="footer-links">
-          <li><a href="#"><i class="fas fa-envelope"></i> contact@SEED.edu</a></li>
-          <li><a href="#"><i class="fas fa-phone"></i> (123) 456-7890</a></li>
-          <li><a href="#"><i class="fas fa-map-marker-alt"></i> BPSU Main Campus</a></li>
+          <li><i class="fas fa-envelope"></i> contact@SEED.edu</li>
+          <li><i class="fas fa-phone"></i> (123) 456-7890</li>
+          <li><i class="fas fa-map-marker-alt"></i> BPSU Main Campus</li>
         </ul>
       </div>
     </div>
     
     <div class="copyright">
-      © 2025 SEED | BPSU Environmental Sustainability Office Platform. All rights reserved.
+      © 2025 SEED | BPSU Environmental Sustainability Office Platform. All rights reserved.<br>Made with 💚 by SEED Team.
     </div>
   </footer>
 <script src="script.js"></script>
