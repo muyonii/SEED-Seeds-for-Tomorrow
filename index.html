@@ -6,13 +6,14 @@
   <title>SEED | BPSU Environmental Sustainability Office</title>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <link rel="stylesheet" href="style.css">
+  <link rel="icon" type="images/jpg" href="logo.png">
 </head>
 <body>
   <header>
     <div class="header-content">
       <a href="#" class="logo" onclick="showPage('landing-page')">
         <div class="logo-icon">
-          <img src="logo.jpg" alt="">
+          <img src="logo.png" alt="">
         </div>
         <div class="logo-text">SEED – Seeds for Tomorrow</div>
       </a>
@@ -70,7 +71,7 @@
         <button class="btn cta" onclick="logTree()">Log a Tree</button>
         <div class="counter">
           <strong id="tree-counter">12,157</strong><br>
-          <span>trees planted across BPSU campuses</span>
+          <span>trees planted across communities</span>
         </div>
       </div>
       <div class="hero-right"></div>
@@ -181,32 +182,46 @@
     </section>
 
     <!-- Ecosystem Section -->
-    <section class="ecosystem-section">
-      <div class="ecosystem-header">
-        <h2>SEED Features</h2>
-        <p>Tools designed for students, organizations, communities, and partners engagement and environmental impact</p>
-        <button class="ecosystem-button" onclick="showPage('social-feed-page')">Explore All Features</button>
-      </div>
+<!-- Ecosystem Section -->
+<section class="ecosystem-section">
+  <div class="ecosystem-header">
+    <h2>SEED Alignment to SDG</h2>
+    <p>Each SEED initiative supports the United Nations Sustainable Development Goals through student, organization, and community collaboration.</p>
+  </div>
 
-      <div class="ecosystem-features">
-        <div class="feature-card">
-          <h3>Tree Planting Tracker</h3>
-          <p>Monitor reforestation efforts across BPSU with real-time data.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Waste Management</h3>
-          <p>Log cleanup drives and track waste collection milestones.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Sustainability Social Feed</h3>
-          <p>Share your sustainability contributions and view others posts.</p>
-        </div>
-        <div class="feature-card">
-          <h3>Sustainability Rewards</h3>
-          <p>Earn recognition for completing tree planting events.</p>
-        </div>
+  <div class="ecosystem-features">
+
+    <div class="feature-card">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/d/d6/Sustainable_Development_Goal_11SustainableCities.svg/512px-Sustainable_Development_Goal_11SustainableCities.svg.png" alt="SDG 11 Sustainable Cities and Communities" width="150" height="150" style="border-radius: 8px;">
       </div>
-    </section>
+      <p>The <strong>Campus Waste Management</strong> initiative aligns with SDG 11 by promoting sustainable practices, organizing cleanup drives, and creating cleaner, safer learning environments for everyone.</p>
+    </div>
+
+    <div class="feature-card">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/7/7b/Sustainable_Development_Goal_13Climate.svg/512px-Sustainable_Development_Goal_13Climate.svg.png" alt="SDG 13 Climate Action" width="150" height="150" style="border-radius: 8px;">
+      </div>
+      <p>The <strong>Sustainability Rewards Program</strong> motivates students to take part in eco-friendly actions such as tree planting and energy-saving drives, contributing directly to climate action efforts.</p>
+    </div>
+
+    <div class="feature-card">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/0/0f/Sustainable_Development_Goal_15LifeOnLand.svg/512px-Sustainable_Development_Goal_15LifeOnLand.svg.png" alt="SDG 15 Life on Land" width="150" height="150" style="border-radius: 8px;">
+      </div>
+      <p>The <strong>Tree Planting Tracker</strong> supports SDG 15 by documenting reforestation efforts and encouraging biodiversity protection within and beyond the campus community.</p>
+    </div>
+
+    <div class="feature-card">
+      <div style="text-align: center; margin-bottom: 15px;">
+        <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/e/e0/Sustainable_Development_Goal_17Partnerships.svg/512px-Sustainable_Development_Goal_17Partnerships.svg.png" alt="SDG 17 Partnerships for the Goals" width="150" height="150" style="border-radius: 8px;">
+      </div>
+      <p>The <strong>SEED Social Feed</strong> embodies SDG 17 by connecting students, organizations, and partners in collaborative sustainability projects that drive collective impact.</p>
+    </div>
+
+  </div>
+</section>
+
   </div>
   
   <!-- Social Feed Page -->
@@ -232,7 +247,7 @@
             <button class="post-btn" onclick="createPost()">Post</button>
           </div>
           <div id="image-preview" style="display: none; margin-top: 15px;">
-            <img id="preview-image" src="" alt="Preview" style="max-width: 100%; max-height: 200px; border-radius: 8px;">
+            <img id="preview-image" src="" alt="Preview" style="max-width: 150%; max-height: 200px; border-radius: 8px;">
             <button id="remove-image" onclick="removeImage()">Remove</button>
           </div>
         </div>
