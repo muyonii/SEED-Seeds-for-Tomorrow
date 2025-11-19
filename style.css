@@ -1304,6 +1304,10 @@
       color: var(--text-dark);
       font-size: 0.95rem;
     }
+    .event-meta-item,
+.event-meta-item span {
+  color: var(--text-dark) !important;
+}
     
     .event-meta-item i {
       color: var(--primary);
